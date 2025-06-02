@@ -1,29 +1,34 @@
+// models/BusinessAccount.js
 const mongoose = require('mongoose');
 
 const noteSchema = new mongoose.Schema({
   text: String,
-  timestamp: String
+  timestamp: String,
+  author: String 
 }, { _id: false });
 
 const businessAccountSchema = new mongoose.Schema({
-  businessName: String,
-  gstNumber: String,
-  contactName: String,
-  email: String,
+  businessName: { type: String, required: true },
+  gstNumber: { type: String, required: true },
+  contactName: { type: String, required: true },
+  email: { type: String, required: true },
   phoneNumber: String,
-  mobileNumber: String,
-  addressLine1: String,
+  mobileNumber: { type: String, required: true },
+  addressLine1: { type: String, required: true },
   addressLine2: String,
   addressLine3: String,
   landmark: String,
-  city: String,
-  pincode: Number,
-  state: String,
-  country: String,
+  city: { type: String, required: true },
+  pincode: { type: Number, required: true },
+  state: { type: String, required: true },
+  country: { type: String, required: true },
   website: String,
-  status: { type: String, default: 'Active' },
-  type: { type: String, enum: ['Hot', 'Warm', 'Cold'], default: 'Warm' },
-  notes: [noteSchema]
-}, { timestamps: true });
+  type: { type: String, enum: ['Hot', 'Warm', 'Cold'], required: true },
+  notes: [noteSchema],
+  status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+  isCustomer: { type: Boolean, default: false }
+}, {
+  timestamps: true
+});
 
 module.exports = mongoose.model('BusinessAccount', businessAccountSchema);

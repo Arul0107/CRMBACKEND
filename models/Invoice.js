@@ -1,30 +1,39 @@
 const mongoose = require('mongoose');
 
-const itemSchema = new mongoose.Schema({
-  description: String,
-  hsnSac: String,
-  quantity: Number,
-  rate: Number
+const noteSchema = new mongoose.Schema({
+  text: String,
+  timestamp: String,
+  author: String
+}, { _id: false });
+
+const paymentSchema = new mongoose.Schema({
+  amount: Number,
+  date: String,
+  method: String,
+  reference: String,
+  addedBy: String
 }, { _id: false });
 
 const invoiceSchema = new mongoose.Schema({
-  businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'BusinessAccount', required: true },
-  businessName: String,
-  businessType: String,
-  businessInfo: String,
-  gstin: String,
-  invoiceNumber: { type: String, unique: true },
+  invoiceNumber: String,
+  businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'BusinessAccount' },
   date: String,
   dueDate: String,
-  customerName: String,
-  customerAddress: String,
-  items: [itemSchema],
+  items: [],
   subTotal: Number,
   tax: Number,
-  total: Number,
   totalAmount: Number,
+  status: String,
+  notes: [noteSchema],
+  isClosed: { type: Boolean, default: false },
+
   paymentStatus: { type: String, enum: ['pending', 'partial', 'paid'], default: 'pending' },
-  isClosed: { type: Boolean, default: false }, // ✅ ADDED
+  paymentHistory: [paymentSchema],
+  invoiceType: {
+    type: String,
+    enum: ['Invoice', 'Proforma'],
+    default: 'Invoice'
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

@@ -11,7 +11,8 @@ const itemSchema = new mongoose.Schema({
 
 const noteSchema = new mongoose.Schema({
   text: String,
-  timestamp: String
+  timestamp: String,
+  author: String 
 }, { _id: false });
 
 const quotationSchema = new mongoose.Schema({
