@@ -1,18 +1,22 @@
-// models/BusinessAccount.js
 const mongoose = require('mongoose');
 
 const noteSchema = new mongoose.Schema({
   text: String,
   timestamp: String,
-  author: String 
+  author: String
 }, { _id: false });
-
+const followUpSchema = new mongoose.Schema({
+  date: String,
+  note: String,
+  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // 👈 Enables population
+}, { _id: false });
 const businessAccountSchema = new mongoose.Schema({
   businessName: { type: String, required: true },
   gstNumber: { type: String, required: true },
   contactName: { type: String, required: true },
   email: { type: String, required: true },
   phoneNumber: String,
+   followUps: [followUpSchema],
   mobileNumber: { type: String, required: true },
   addressLine1: { type: String, required: true },
   addressLine2: String,
@@ -27,8 +31,6 @@ const businessAccountSchema = new mongoose.Schema({
   notes: [noteSchema],
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
   isCustomer: { type: Boolean, default: false }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('BusinessAccount', businessAccountSchema);
