@@ -4,28 +4,84 @@ const Business = require('../models/BusinessAccount');
 // GET all invoices
 exports.getAll = async (req, res) => {
   try {
-    const invoices = await Invoice.find().sort({ createdAt: -1 });
+    const invoices = await Invoice.find()
+      .populate('businessId') // ✅ This fetches business details
+      .sort({ createdAt: -1 });
     res.json(invoices);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch invoices' });
   }
 };
-
 // GET invoice type enums
 exports.getInvoiceTypes = (req, res) => {
   res.json(['Invoice', 'Proforma']);
 };
+exports.convertToInvoice = async (req, res) => {
+  try {
+    const proforma = await Invoice.findById(req.params.id);
+    if (!proforma || proforma.invoiceType !== 'Proforma') {
+      return res.status(400).json({ error: 'Invalid Proforma invoice' });
+    }
+    if (proforma.proformaStatus !== 'confirmed') {
+      return res.status(400).json({ error: 'Only confirmed Proforma can be converted' });
+    }
 
+    const lastInvoice = await Invoice.findOne({ invoiceType: 'Invoice' }).sort({ createdAt: -1 });
+    const nextNumber = lastInvoice?.invoiceNumber 
+      ? `INV-${String(parseInt(lastInvoice.invoiceNumber.split('-')[1]) + 1).padStart(4, '0')}`
+      : 'INV-0001';
+
+    const newInvoice = new Invoice({
+      ...proforma.toObject(),
+      _id: undefined,
+      invoiceNumber: nextNumber,
+      proformaNumber: proforma.proformaNumber,
+      invoiceType: 'Invoice',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    await newInvoice.save();
+    res.json(newInvoice);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+// Add new controller for updating Proforma status
+exports.updateProformaStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const invoice = await Invoice.findById(req.params.id);
+    
+    if (!invoice || invoice.invoiceType !== 'Proforma') {
+      return res.status(400).json({ error: 'Invalid Proforma invoice' });
+    }
+
+    invoice.proformaStatus = status;
+    if (status === 'confirmed') {
+      invoice.isClosed = true;
+    }
+    
+    await invoice.save();
+    res.json(invoice);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
 // POST create a new invoice
 exports.create = async (req, res) => {
   try {
-    const lastInvoice = await Invoice.findOne().sort({ createdAt: -1 });
-    let nextNumber = 'INV-0001';
-
-    if (lastInvoice?.invoiceNumber) {
-      const lastNum = parseInt(lastInvoice.invoiceNumber.split('-')[1], 10);
-      const newNum = lastNum + 1;
-      nextNumber = `INV-${String(newNum).padStart(4, '0')}`;
+    let nextNumber;
+    if (req.body.invoiceType === 'Proforma') {
+      const lastProforma = await Invoice.findOne({ invoiceType: 'Proforma' }).sort({ createdAt: -1 });
+      nextNumber = lastProforma?.proformaNumber 
+        ? `PRO-${String(parseInt(lastProforma.proformaNumber.split('-')[1]) + 1).padStart(4, '0')}`
+        : 'PRO-0001';
+    } else {
+      const lastInvoice = await Invoice.findOne({ invoiceType: 'Invoice' }).sort({ createdAt: -1 });
+      nextNumber = lastInvoice?.invoiceNumber 
+        ? `INV-${String(parseInt(lastInvoice.invoiceNumber.split('-')[1]) + 1).padStart(4, '0')}`
+        : 'INV-0001';
     }
 
     const items = req.body.items || [];
@@ -35,7 +91,8 @@ exports.create = async (req, res) => {
 
     const invoice = new Invoice({
       ...req.body,
-      invoiceNumber: nextNumber,
+      invoiceNumber: req.body.invoiceType === 'Invoice' ? nextNumber : undefined,
+      proformaNumber: req.body.invoiceType === 'Proforma' ? nextNumber : undefined,
       subTotal,
       tax,
       totalAmount
@@ -66,7 +123,7 @@ exports.addPayment = async (req, res) => {
 };
 exports.getInvoiceById = async (req, res) => {
   try {
-    const invoice = await Invoice.findById(req.params.id);
+    const invoice = await Invoice.findById(req.params.id).populate('businessId');
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     res.json(invoice);
   } catch (err) {

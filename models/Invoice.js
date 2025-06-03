@@ -16,6 +16,7 @@ const paymentSchema = new mongoose.Schema({
 
 const invoiceSchema = new mongoose.Schema({
   invoiceNumber: String,
+  
   businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'BusinessAccount' },
   date: String,
   dueDate: String,
