@@ -84,6 +84,7 @@ exports.getAccountById = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch customer', error: err.message });
   }
 };
+
 exports.getFollowUpsByAccountId = async (req, res) => {
   try {
     const account = await BusinessAccount.findById(req.params.id)
