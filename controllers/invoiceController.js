@@ -221,3 +221,20 @@ exports.unlockInvoice = async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
+exports.getInvoicesByBusinessId = async (req, res) => {
+  try {
+    const invoices = await Invoice.find({ businessId: req.params.id });
+    res.json(invoices);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch invoices' });
+  }
+};
+exports.getPaymentsByBusinessId = async (req, res) => {
+  try {
+    const invoices = await Invoice.find({ businessId: req.params.id });
+    const allPayments = invoices.flatMap(inv => inv.paymentHistory || []);
+    res.json(allPayments);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch payments' });
+  }
+};

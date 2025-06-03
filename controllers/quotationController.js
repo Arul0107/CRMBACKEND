@@ -65,3 +65,11 @@ exports.getActiveBusinesses = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch businesses' });
   }
 };
+exports.getQuotationsByBusinessId = async (req, res) => {
+  try {
+    const quotations = await Quotation.find({ businessId: req.params.id });
+    res.json(quotations);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch quotations' });
+  }
+};

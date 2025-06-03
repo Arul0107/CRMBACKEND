@@ -2,27 +2,27 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/businessAccountController');
 
-// ✅ GET all business accounts
+// GET all business accounts
 router.get('/', controller.getAll);
 
-// ✅ GET active leads (used for dropdowns in invoices/quotations)
+// GET active leads
 router.get('/leads/active', controller.getActiveLeads);
 
-// ✅ GET all customers (if implemented separately)
+// GET all customers
 router.get('/customers', controller.getCustomers);
 
-// ✅ CREATE new business account
-router.post('/', controller.create);
+// ✅ GET follow-ups by business account
 
-// ✅ UPDATE existing business account
-router.put('/:id', controller.update);
-
-// ✅ DELETE business account
-router.delete('/:id', controller.delete);
-
-// ✅ FOLLOW-UP ROUTES
+// ✅ GET business account by ID
+router.get('/:id', controller.getAccountById); // <-- new controller needed
+router.get('/:id/followups', controller.getFollowUpsByAccountId);
 router.post('/:id/followups', controller.addFollowUp);
 router.put('/:id/followups/:index', controller.updateFollowUp);
 router.delete('/:id/followups/:index', controller.deleteFollowUp);
+
+// CREATE, UPDATE, DELETE
+router.post('/', controller.create);
+router.put('/:id', controller.update);
+router.delete('/:id', controller.delete);
 
 module.exports = router;

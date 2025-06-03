@@ -65,29 +65,65 @@ exports.delete = async (req, res) => {
   }
 };
 
-// Add a follow-up to a lead
+
+exports.getQuotationsByBusinessId = async (req, res) => {
+  try {
+    const quotations = await Quotation.find({ businessId: req.params.id });
+    res.json(quotations);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch quotations' });
+  }
+};
+
+exports.getAccountById = async (req, res) => {
+  try {
+    const account = await BusinessAccount.findById(req.params.id);
+    if (!account) return res.status(404).json({ message: 'Customer not found' });
+    res.json(account);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch customer', error: err.message });
+  }
+};
+exports.getFollowUpsByAccountId = async (req, res) => {
+  try {
+    const account = await BusinessAccount.findById(req.params.id)
+      .populate('followUps.addedBy', 'name email');
+
+    if (!account) return res.status(404).json({ message: 'Account not found' });
+
+    res.json(account.followUps || []);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch follow-ups', error: err.message });
+  }
+};
+
+// ADD a follow-up
 exports.addFollowUp = async (req, res) => {
   try {
     const { id } = req.params;
-    const { comment, followupDate, addedBy } = req.body;
+    const { date, note } = req.body;
+    const userId = req.user?.id || req.body.addedBy;
 
-    const account = await BusinessAccount.findById(id);
-    if (!account) {
-      return res.status(404).json({ message: 'Account not found' });
+    if (!date || !note || !userId) {
+      return res.status(400).json({ message: 'Date, note, and addedBy are required' });
     }
 
-    account.followUps.push({ comment, followupDate, addedBy });
+    const account = await BusinessAccount.findById(id);
+    if (!account) return res.status(404).json({ message: 'Account not found' });
+
+    account.followUps.push({ date, note, addedBy: userId });
     await account.save();
 
-    res.status(200).json({ message: 'Follow-up added successfully', account });
+    res.status(200).json({ message: 'Follow-up added', followUps: account.followUps });
   } catch (error) {
     res.status(500).json({ message: 'Failed to add follow-up', error: error.message });
   }
 };
-// Edit a follow-up by index
+
+// UPDATE follow-up by index
 exports.updateFollowUp = async (req, res) => {
   const { id, index } = req.params;
-  const { comment, followupDate } = req.body;
+  const { date, note } = req.body;
 
   try {
     const account = await BusinessAccount.findById(id);
@@ -95,16 +131,17 @@ exports.updateFollowUp = async (req, res) => {
       return res.status(404).json({ message: 'Follow-up not found' });
     }
 
-    account.followUps[index].comment = comment;
-    account.followUps[index].followupDate = followupDate;
+    account.followUps[index].date = date;
+    account.followUps[index].note = note;
     await account.save();
-    res.status(200).json({ message: 'Follow-up updated', account });
+
+    res.status(200).json({ message: 'Follow-up updated', followUps: account.followUps });
   } catch (error) {
     res.status(500).json({ message: 'Error updating follow-up', error: error.message });
   }
 };
 
-// Delete a follow-up by index
+// DELETE follow-up by index
 exports.deleteFollowUp = async (req, res) => {
   const { id, index } = req.params;
 
@@ -116,7 +153,8 @@ exports.deleteFollowUp = async (req, res) => {
 
     account.followUps.splice(index, 1);
     await account.save();
-    res.status(200).json({ message: 'Follow-up deleted', account });
+
+    res.status(200).json({ message: 'Follow-up deleted', followUps: account.followUps });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting follow-up', error: error.message });
   }
