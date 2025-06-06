@@ -12,6 +12,11 @@ const followUpSchema = new mongoose.Schema({
 }, { _id: false });
 const businessAccountSchema = new mongoose.Schema({
   businessName: { type: String, required: true },
+  sourceType: {
+  type: String,
+  enum: ['Facebook', 'Instagram', 'WhatsApp', 'Referral', 'LinkedIn', 'Website', 'Other'],
+  default: 'Other'
+},
   gstNumber: { type: String, required: true },
   contactName: { type: String, required: true },
   email: { type: String, required: true },

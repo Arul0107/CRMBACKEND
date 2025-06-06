@@ -1,14 +1,28 @@
 const mongoose = require('mongoose');
 
+const noteSchema = new mongoose.Schema({
+  text: String,
+  timestamp: String,
+  author: String
+}, { _id: false });
+
+const optionSchema = new mongoose.Schema({
+  type: { type: String, required: true },
+  description: { type: String, required: true },
+}, { _id: false });
+
 const productSchema = new mongoose.Schema({
+  product_id: { type: String, required: true, unique: true },
   productName: { type: String, required: true },
-  quantity: { type: Number, default: 1 },
-  price: { type: Number, required: true },
-  status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
-  hsnSac: String,
+  price: Number,
+  quantity: Number,
+  inStock: Number,
+  outStock: Number,
+  stockLoadDate: Date,
+  isActive: { type: Boolean, default: true },
   description: String,
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  options: [optionSchema],
+  notes: [noteSchema]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

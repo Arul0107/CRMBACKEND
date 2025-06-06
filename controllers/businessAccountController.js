@@ -9,6 +9,20 @@ exports.getAll = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+// ✅ Get leads by source type
+exports.getLeadsBySource = async (req, res) => {
+  try {
+    const { sourceType } = req.params;
+    const leads = await BusinessAccount.find({
+      isCustomer: false,
+      status: 'Active',
+      sourceType: sourceType
+    });
+    res.json(leads);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching leads by source', error });
+  }
+};
 
 // Get only active leads (not customers)
 exports.getActiveLeads = async (req, res) => {

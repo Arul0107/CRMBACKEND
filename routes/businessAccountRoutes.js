@@ -12,7 +12,7 @@ router.get('/leads/active', controller.getActiveLeads);
 router.get('/customers', controller.getCustomers);
 
 // ✅ GET follow-ups by business account
-
+router.get('/leads/source/:sourceType', controller.getLeadsBySource);
 // ✅ GET business account by ID
 router.get('/:id', controller.getAccountById); // <-- new controller needed
 router.get('/:id/followups', controller.getFollowUpsByAccountId);
