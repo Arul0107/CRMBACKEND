@@ -1,4 +1,5 @@
 const BusinessAccount = require('../models/BusinessAccount');
+const Quotation = require('../models/Quotation'); // ADDED: Assuming you have a Quotation model
 
 // Get all accounts (leads + customers)
 exports.getAll = async (req, res) => {
@@ -9,6 +10,7 @@ exports.getAll = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 // ✅ Get leads by source type
 exports.getLeadsBySource = async (req, res) => {
   try {
@@ -20,7 +22,7 @@ exports.getLeadsBySource = async (req, res) => {
     });
     res.json(leads);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching leads by source', error });
+    res.status(500).json({ message: 'Error fetching leads by source', error: error.message }); // Changed to error.message for consistency
   }
 };
 
@@ -51,54 +53,72 @@ exports.create = async (req, res) => {
     const saved = await newAccount.save();
     res.status(201).json(saved);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    // Specific handling for Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: err.message });
+    }
+    res.status(500).json({ error: err.message });
   }
 };
 
 // Update an account (edit or convert)
 exports.update = async (req, res) => {
   try {
+    // ADDED: { new: true, runValidators: true } for proper validation on update
     const updated = await BusinessAccount.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true } // ADDED runValidators: true
     );
+    if (!updated) { // Handle case where ID is not found
+      return res.status(404).json({ message: 'Account not found' });
+    }
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    // Specific handling for Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: err.message });
+    }
+    res.status(500).json({ error: err.message });
   }
 };
 
-// Delete an account
+// Delete an account (soft delete or actual delete, based on your schema/needs)
 exports.delete = async (req, res) => {
   try {
-    await BusinessAccount.findByIdAndDelete(req.params.id);
+    const deletedAccount = await BusinessAccount.findByIdAndDelete(req.params.id);
+    if (!deletedAccount) {
+        return res.status(404).json({ message: 'Account not found' });
+    }
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message }); // Changed to 500 for general server errors
   }
 };
 
-
+// Get quotations by business account ID
 exports.getQuotationsByBusinessId = async (req, res) => {
   try {
+    // Ensure Quotation model is imported at the top of the file
     const quotations = await Quotation.find({ businessId: req.params.id });
     res.json(quotations);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch quotations' });
+    res.status(500).json({ message: 'Failed to fetch quotations', error: err.message }); // Added error.message
   }
 };
 
+// Get business account by ID
 exports.getAccountById = async (req, res) => {
   try {
     const account = await BusinessAccount.findById(req.params.id);
-    if (!account) return res.status(404).json({ message: 'Customer not found' });
+    if (!account) return res.status(404).json({ message: 'Account not found' }); // Changed 'Customer' to 'Account'
     res.json(account);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch customer', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch account', error: err.message }); // Changed 'customer' to 'account'
   }
 };
 
+// Get follow-ups by business account ID
 exports.getFollowUpsByAccountId = async (req, res) => {
   try {
     const account = await BusinessAccount.findById(req.params.id)
@@ -117,10 +137,12 @@ exports.addFollowUp = async (req, res) => {
   try {
     const { id } = req.params;
     const { date, note } = req.body;
+    // Assuming req.user is populated by authentication middleware.
+    // If not, ensure req.body.addedBy is always provided from the client.
     const userId = req.user?.id || req.body.addedBy;
 
     if (!date || !note || !userId) {
-      return res.status(400).json({ message: 'Date, note, and addedBy are required' });
+      return res.status(400).json({ message: 'Date, note, and addedBy (or authenticated user) are required' });
     }
 
     const account = await BusinessAccount.findById(id);

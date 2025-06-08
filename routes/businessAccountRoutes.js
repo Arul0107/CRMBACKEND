@@ -11,10 +11,10 @@ router.get('/leads/active', controller.getActiveLeads);
 // GET all customers
 router.get('/customers', controller.getCustomers);
 
-// ✅ GET follow-ups by business account
+// ✅ GET leads by source type
 router.get('/leads/source/:sourceType', controller.getLeadsBySource);
 // ✅ GET business account by ID
-router.get('/:id', controller.getAccountById); // <-- new controller needed
+router.get('/:id', controller.getAccountById);
 router.get('/:id/followups', controller.getFollowUpsByAccountId);
 router.post('/:id/followups', controller.addFollowUp);
 router.put('/:id/followups/:index', controller.updateFollowUp);

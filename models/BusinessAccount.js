@@ -1,3 +1,4 @@
+// BusinessAccount.js
 const mongoose = require('mongoose');
 
 const noteSchema = new mongoose.Schema({
@@ -13,15 +14,15 @@ const followUpSchema = new mongoose.Schema({
 const businessAccountSchema = new mongoose.Schema({
   businessName: { type: String, required: true },
   sourceType: {
-  type: String,
-  enum: ['Facebook', 'Instagram', 'WhatsApp', 'Referral', 'LinkedIn', 'Website', 'Other'],
-  default: 'Other'
-},
+    type: String,
+    enum: ['Direct', 'Facebook Referral', 'Google Ads', 'Website', 'Cold Call', 'Other'], // UPDATED ENUM VALUES
+    default: 'Other'
+  },
   gstNumber: { type: String, required: true },
   contactName: { type: String, required: true },
   email: { type: String, required: true },
   phoneNumber: String,
-   followUps: [followUpSchema],
+  followUps: [followUpSchema],
   mobileNumber: { type: String, required: true },
   addressLine1: { type: String, required: true },
   addressLine2: String,
