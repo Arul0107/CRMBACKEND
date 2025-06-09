@@ -17,7 +17,7 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const userRoutes = require('./routes/userRoutes');
 
 const authRoutes = require('./routes/authRoutes');
-
+const productRoutes = require('./routes/productRoutes');
 
 // ✅ Route mounting
 app.use('/api/auth', authRoutes);
@@ -25,6 +25,7 @@ app.use('/api/accounts', businessRoutes);       // BusinessAccount API
 app.use('/api/quotations', quotationRoutes);    // Quotations API
 app.use('/api/invoices', invoiceRoutes);        // Invoices API
 app.use('/api/users', userRoutes);
+app.use('/api/products', productRoutes);        // Products API
 // ✅ Test route (optional)
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Server is working fine 🎉' });
