@@ -7,7 +7,17 @@ const connectDB = require('./config/db');
 const app = express();
 
 // ✅ Middleware
+
 app.use(cors());
+
+const corsOptions = {
+  origin: ["https://crmfrontend-sage.vercel.app"],
+  credentials: true,
+  methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // ✅ Route files
