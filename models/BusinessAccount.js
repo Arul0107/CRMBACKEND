@@ -7,15 +7,21 @@ const noteSchema = new mongoose.Schema({
   author: String
 }, { _id: false });
 const followUpSchema = new mongoose.Schema({
-  date: String,
-  note: String,
-  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // 👈 Enables population
+  date: { type: Date, required: true },
+  note: { type: String, required: true },
+  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  status: {        // <--- ADDED: New status field
+    type: String,
+    enum: ['pending', 'completed'], // Or 'open', 'closed', etc.
+    default: 'pending'
+  },
+  createdAt: { type: Date, default: Date.now }
 }, { _id: false });
 const businessAccountSchema = new mongoose.Schema({
   businessName: { type: String, required: true },
   sourceType: {
     type: String,
-    enum: ['Direct', 'Facebook Referral', 'Google Ads', 'Website', 'Cold Call', 'Other'], // UPDATED ENUM VALUES
+    enum: ['Direct', 'Facebook ', 'Google Ads', 'Website', 'Cold Call', 'Other'], // UPDATED ENUM VALUES
     default: 'Other'
   },
   gstNumber: { type: String, required: true },

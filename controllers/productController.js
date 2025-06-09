@@ -1,12 +1,12 @@
 const Product = require('../models/Product');
 
-// Generate product_id like PROD-001, PROD-002
+// Generate product_id like PROD-001
 const generateProductId = async () => {
   const count = await Product.countDocuments();
   return `PROD-${String(count + 1).padStart(3, '0')}`;
 };
 
-// Get all products
+// GET all products
 exports.getAllProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
@@ -16,7 +16,7 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
-// Get single product
+// GET product by ID
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -27,12 +27,10 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// ✅ Create product
+// CREATE product
 exports.createProduct = async (req, res) => {
   try {
     const product_id = await generateProductId();
-
-    // Remove frontend-sent productId/product_id to avoid overwrite
     const { productId, product_id: _, ...rest } = req.body;
 
     const newProduct = new Product({
@@ -43,12 +41,11 @@ exports.createProduct = async (req, res) => {
     await newProduct.save();
     res.status(201).json(newProduct);
   } catch (error) {
-    console.error('Create Product Error:', error);
     res.status(400).json({ error: 'Failed to create product', details: error.message });
   }
 };
 
-// Update product
+// UPDATE product
 exports.updateProduct = async (req, res) => {
   try {
     const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
@@ -62,7 +59,7 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// Delete product
+// DELETE product
 exports.deleteProduct = async (req, res) => {
   try {
     const deleted = await Product.findByIdAndDelete(req.params.id);
@@ -73,7 +70,7 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-// Update notes
+// UPDATE product notes
 exports.updateProductNotes = async (req, res) => {
   const { id } = req.params;
   const { notes } = req.body;

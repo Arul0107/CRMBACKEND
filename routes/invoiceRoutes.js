@@ -8,10 +8,15 @@ router.get('/types', invoiceController.getInvoiceTypes);
 router.get('/leads/active', invoiceController.getActiveBusinesses);
 router.get('/business/:id', invoiceController.getInvoicesByBusinessId);
 router.get('/business/:id/payments', invoiceController.getPaymentsByBusinessId);
-router.get('/:id', invoiceController.getInvoiceById);
 
+// --- CORRECTED FOLLOW-UP ROUTES (associated with Invoice ID) ---
+// These specific routes MUST be placed before the general '/:id' route.
+router.get('/:id/followups', invoiceController.getFollowUpsByInvoiceId);
+router.post('/:id/followups', invoiceController.addFollowUp);
+router.put('/:id/followups/:index', invoiceController.updateFollowUp);
+router.delete('/:id/followups/:index', invoiceController.deleteFollowUp);
 
-// NEW ROUTE: Convert Proforma to Invoice
+router.get('/:id', invoiceController.getInvoiceById); // This general route should now come after specific ones
 
 // POST & PUT routes
 router.post('/', invoiceController.create);
@@ -23,7 +28,7 @@ router.patch('/:id/close', invoiceController.closeInvoice);
 router.patch('/:id/unlock', invoiceController.unlockInvoice);
 router.patch('/:id/payments', invoiceController.addPayment);
 router.patch('/:id/convert-to-invoice', invoiceController.convertToInvoice);
-
+router.patch('/:id/close', invoiceController.closeInvoice);
 // DELETE
 router.delete('/:id', invoiceController.remove);
 

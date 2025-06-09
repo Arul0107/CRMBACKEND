@@ -132,23 +132,23 @@ exports.getFollowUpsByAccountId = async (req, res) => {
   }
 };
 
-// ADD a follow-up
-exports.addFollowUp = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { date, note } = req.body;
-    // Assuming req.user is populated by authentication middleware.
-    // If not, ensure req.body.addedBy is always provided from the client.
-    const userId = req.user?.id || req.body.addedBy;
+// In businessAccountController.js
 
-    if (!date || !note || !userId) {
-      return res.status(400).json({ message: 'Date, note, and addedBy (or authenticated user) are required' });
+// Add a new follow-up
+exports.addFollowUp = async (req, res) => {
+  const { id } = req.params;
+  // Destructure 'status' from req.body
+  const { date, note, addedBy, status } = req.body;
+
+  try {
+    const account = await BusinessAccount.findById(id);
+    if (!account) {
+      return res.status(404).json({ message: 'Business Account not found' });
     }
 
-    const account = await BusinessAccount.findById(id);
-    if (!account) return res.status(404).json({ message: 'Account not found' });
-
-    account.followUps.push({ date, note, addedBy: userId });
+    // Create new follow-up object including status
+    const newFollowUp = { date, note, addedBy, status }; // Make sure 'status' is included here
+    account.followUps.push(newFollowUp);
     await account.save();
 
     res.status(200).json({ message: 'Follow-up added', followUps: account.followUps });
@@ -160,7 +160,8 @@ exports.addFollowUp = async (req, res) => {
 // UPDATE follow-up by index
 exports.updateFollowUp = async (req, res) => {
   const { id, index } = req.params;
-  const { date, note } = req.body;
+  // Destructure 'status' from req.body
+  const { date, note, status } = req.body;
 
   try {
     const account = await BusinessAccount.findById(id);
@@ -170,6 +171,8 @@ exports.updateFollowUp = async (req, res) => {
 
     account.followUps[index].date = date;
     account.followUps[index].note = note;
+    // Update the status
+    account.followUps[index].status = status;
     await account.save();
 
     res.status(200).json({ message: 'Follow-up updated', followUps: account.followUps });
@@ -177,7 +180,6 @@ exports.updateFollowUp = async (req, res) => {
     res.status(500).json({ message: 'Error updating follow-up', error: error.message });
   }
 };
-
 // DELETE follow-up by index
 exports.deleteFollowUp = async (req, res) => {
   const { id, index } = req.params;

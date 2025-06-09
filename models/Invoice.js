@@ -14,6 +14,19 @@ const paymentSchema = new mongoose.Schema({
   addedBy: String
 }, { _id: false });
 
+// Define the followUpSchema correctly with the 'addedBy' field referencing 'User'
+const followUpSchema = new mongoose.Schema({
+  date: { type: Date, required: true },
+  note: { type: String, required: true },
+  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  status: {        // <--- ADDED: New status field
+    type: String,
+    enum: ['pending', 'completed'], // Or 'open', 'closed', etc.
+    default: 'pending'
+  },
+  createdAt: { type: Date, default: Date.now }
+}, { _id: false }); // Keep _id: false if you don't want MongoDB's default _id for subdocuments
+
 const invoiceSchema = new mongoose.Schema({
   // Unique invoice number (sparse for optional use)
   invoiceNumber: { type: String, unique: true, sparse: true },      // For 'Invoice' type
@@ -30,15 +43,16 @@ const invoiceSchema = new mongoose.Schema({
   contactPerson: String,
   contactNumber: String,
 
-  date: String,
-  dueDate: String,
+  date: String, // Consider changing to Date type for consistency with followupDate
+  dueDate: String, // Consider changing to Date type for consistency
 
   items: [
     {
       description: String,
       hsnSac: String,
       quantity: Number,
-      rate: Number
+      rate: Number,
+      specifications: [{ name: String, value: String }] // Added specifications if they are part of your items
     }
   ],
 
@@ -47,6 +61,13 @@ const invoiceSchema = new mongoose.Schema({
   taxRate: { type: Number, default: 18 },
   totalAmount: Number,
   discountAmount: { type: Number, default: 0 },
+  // Added GST-related fields if your invoices include them
+  gstType: { type: String, enum: ['intrastate', 'interstate'], default: 'intrastate' },
+  gstPercentage: { type: Number, default: 18 },
+  cgstAmount: Number,
+  sgstAmount: Number,
+  igstAmount: Number,
+
 
   paymentStatus: {
     type: String,
@@ -75,7 +96,10 @@ const invoiceSchema = new mongoose.Schema({
 
   notes: [noteSchema],
   paymentTerms: String,
-  isClosed: { type: Boolean, default: false }
+  isClosed: { type: Boolean, default: false },
+  
+  // THIS IS THE MISSING PART: Add the followUps array here, using the defined followUpSchema
+  followUps: [followUpSchema]
 
 }, { timestamps: true });
 
