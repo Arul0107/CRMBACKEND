@@ -12,7 +12,56 @@ exports.getAll = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch invoices' });
   }
 };
+// POST create a new invoice
+exports.create = async (req, res) => {
+  try {
+    const { items, taxRate = 18, discountAmount = 0, invoiceType, ...rest } = req.body; // Default taxRate to 18, discount to 0
+    let nextNumber;
 
+    if (invoiceType === 'Proforma') {
+      const lastProforma = await Invoice.findOne({ invoiceType: 'Proforma' }).sort({ createdAt: -1 });
+      nextNumber = lastProforma?.proformaNumber 
+        ? `PRO-${String(parseInt(lastProforma.proformaNumber.split('-')[1]) + 1).padStart(4, '0')}`
+        : 'PRO-0001';
+    } else { // 'Invoice'
+      const lastInvoice = await Invoice.findOne({ invoiceType: 'Invoice' }).sort({ createdAt: -1 });
+      nextNumber = lastInvoice?.invoiceNumber 
+        ? `INV-${String(parseInt(lastInvoice.invoiceNumber.split('-')[1]) + 1).padStart(4, '0')}`
+        : 'INV-0001';
+    }
+
+    // ... rest of the code ...
+
+    const invoice = new Invoice({
+      ...rest,
+      invoiceNumber: invoiceType === 'Invoice' ? nextNumber : undefined,
+      proformaNumber: invoiceType === 'Proforma' ? nextNumber : undefined, // This line assigns the generated proformaNumber
+      invoiceType,
+      items: calculatedItems,
+      subTotal,
+      tax,
+      taxRate,
+      discountAmount,
+      totalAmount,
+      // Denormalize business/customer details from the request body
+      businessName: req.body.businessName,
+      customerName: req.body.customerName,
+      customerAddress: req.body.customerAddress,
+      customerGSTIN: req.body.customerGSTIN,
+      companyGSTIN: req.body.companyGSTIN,
+      companyName: req.body.companyName,
+      companyAddress: req.body.companyAddress,
+      contactPerson: req.body.contactPerson,
+      contactNumber: req.body.contactNumber,
+      paymentTerms: req.body.paymentTerms,
+    });
+
+    const saved = await invoice.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
 // GET invoice type enums
 exports.getInvoiceTypes = (req, res) => {
   res.json(['Invoice', 'Proforma']);
