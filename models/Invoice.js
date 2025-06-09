@@ -15,50 +15,67 @@ const paymentSchema = new mongoose.Schema({
 }, { _id: false });
 
 const invoiceSchema = new mongoose.Schema({
-  invoiceNumber: String, // For 'Invoice' type
-  proformaNumber: String, // For 'Proforma' type
-  
+  // Unique invoice number (sparse for optional use)
+  invoiceNumber: { type: String, unique: true, sparse: true },      // For 'Invoice' type
+  proformaNumber: { type: String, unique: true, sparse: true },     // For 'Proforma' type
+
   businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'BusinessAccount' },
-  businessName: String, // Denormalized for easier display
-  customerName: String, // Denormalized
-  customerAddress: String, // Denormalized
-  customerGSTIN: String, // Denormalized for customer's GSTIN
-  companyGSTIN: String, // To store your company's GSTIN
-  companyName: String, // To store your company name
-  companyAddress: String, // To store your company address
-  contactPerson: String, // Customer contact person
-  contactNumber: String, // Customer contact number
+  businessName: String,             // Denormalized for display
+  customerName: String,
+  customerAddress: String,
+  customerGSTIN: String,
+  companyGSTIN: String,
+  companyName: String,
+  companyAddress: String,
+  contactPerson: String,
+  contactNumber: String,
 
   date: String,
   dueDate: String,
+
   items: [
     {
       description: String,
       hsnSac: String,
       quantity: Number,
-      rate: Number,
+      rate: Number
     }
   ],
+
   subTotal: Number,
   tax: Number,
-  taxRate: { type: Number, default: 18 }, // New field for tax rate
+  taxRate: { type: Number, default: 18 },
   totalAmount: Number,
-  discountAmount: { type: Number, default: 0 }, // Added discount field
-  paymentStatus: { type: String, enum: ['pending', 'partial', 'paid'], default: 'pending' },
+  discountAmount: { type: Number, default: 0 },
+
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'partial', 'paid'],
+    default: 'pending'
+  },
   paymentHistory: [paymentSchema],
+
   invoiceType: {
     type: String,
     enum: ['Invoice', 'Proforma'],
     default: 'Invoice'
   },
+  // NEW FIELD: conversionStatus for Proforma Invoices
+  conversionStatus: {
+    type: String,
+    enum: ['pending', 'converted', 'rejected'], // Define your desired states
+    default: 'pending' // Default state for new Proforma invoices
+  },
+
   proformaStatus: {
     type: String,
-    enum: ['draft', 'pending', 'confirmed', 'cancelled'],
+    enum: ['draft', 'pending', 'confirmed', 'cancelled', 'converted'], // Added 'converted' status
     default: 'draft'
   },
+
   notes: [noteSchema],
-  paymentTerms: String, // New field for payment terms
-  isClosed: { type: Boolean, default: false }, // Renamed from status to isClosed for clarity and avoid conflict with paymentStatus
+  paymentTerms: String,
+  isClosed: { type: Boolean, default: false }
 
 }, { timestamps: true });
 
