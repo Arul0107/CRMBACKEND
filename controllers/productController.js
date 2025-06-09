@@ -1,4 +1,4 @@
-const Product = require('../models/product');
+const Product = require('../models/Product');
 
 // Generate product_id like PROD-001, PROD-002
 const generateProductId = async () => {
