@@ -39,21 +39,33 @@ exports.getActiveLeads = async (req, res) => {
 // Get only customers
 exports.getCustomers = async (req, res) => {
   try {
-    const customers = await BusinessAccount.find({ isCustomer: true });
+    const customers = await BusinessAccount.find({ isCustomer: true }).populate('followUps.addedBy', 'name');
     res.json(customers);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// Create a new lead/customer
+// Get business account by ID
+exports.getAccountById = async (req, res) => {
+  try {
+    const account = await BusinessAccount.findById(req.params.id).populate('followUps.addedBy', 'name');
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+    res.json(account);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// CREATE new business account
 exports.create = async (req, res) => {
   try {
     const newAccount = new BusinessAccount(req.body);
-    const saved = await newAccount.save();
-    res.status(201).json(saved);
+    const savedAccount = await newAccount.save();
+    res.status(201).json(savedAccount);
   } catch (err) {
-    // Specific handling for Mongoose validation errors
     if (err.name === 'ValidationError') {
       return res.status(400).json({ error: err.message });
     }
@@ -61,21 +73,19 @@ exports.create = async (req, res) => {
   }
 };
 
-// Update an account (edit or convert)
+// UPDATE business account
 exports.update = async (req, res) => {
   try {
-    // ADDED: { new: true, runValidators: true } for proper validation on update
     const updated = await BusinessAccount.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true, runValidators: true } // ADDED runValidators: true
+      { new: true, runValidators: true }
     );
-    if (!updated) { // Handle case where ID is not found
+    if (!updated) {
       return res.status(404).json({ message: 'Account not found' });
     }
     res.json(updated);
   } catch (err) {
-    // Specific handling for Mongoose validation errors
     if (err.name === 'ValidationError') {
       return res.status(400).json({ error: err.message });
     }
@@ -83,75 +93,81 @@ exports.update = async (req, res) => {
   }
 };
 
-// Delete an account (soft delete or actual delete, based on your schema/needs)
+// DELETE business account (soft delete)
 exports.delete = async (req, res) => {
   try {
-    const deletedAccount = await BusinessAccount.findByIdAndDelete(req.params.id);
+    const deletedAccount = await BusinessAccount.findByIdAndUpdate(
+      req.params.id,
+      { status: 'Inactive' }, // Soft delete by setting status to Inactive
+      { new: true }
+    );
     if (!deletedAccount) {
-        return res.status(404).json({ message: 'Account not found' });
+      return res.status(404).json({ message: 'Account not found' });
     }
-    res.json({ message: 'Deleted successfully' });
+    res.json({ message: 'Account soft-deleted successfully', account: deletedAccount });
   } catch (err) {
-    res.status(500).json({ error: err.message }); // Changed to 500 for general server errors
+    res.status(500).json({ error: err.message });
   }
 };
 
-// Get quotations by business account ID
-exports.getQuotationsByBusinessId = async (req, res) => {
+// ADD note to an account
+exports.addNote = async (req, res) => {
   try {
-    // Ensure Quotation model is imported at the top of the file
-    const quotations = await Quotation.find({ businessId: req.params.id });
-    res.json(quotations);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch quotations', error: err.message }); // Added error.message
-  }
-};
-
-// Get business account by ID
-exports.getAccountById = async (req, res) => {
-  try {
-    const account = await BusinessAccount.findById(req.params.id);
-    if (!account) return res.status(404).json({ message: 'Account not found' }); // Changed 'Customer' to 'Account'
-    res.json(account);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch account', error: err.message }); // Changed 'customer' to 'account'
-  }
-};
-
-// Get follow-ups by business account ID
-exports.getFollowUpsByAccountId = async (req, res) => {
-  try {
-    const account = await BusinessAccount.findById(req.params.id)
-      .populate('followUps.addedBy', 'name email');
-
-    if (!account) return res.status(404).json({ message: 'Account not found' });
-
-    res.json(account.followUps || []);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch follow-ups', error: err.message });
-  }
-};
-
-// In businessAccountController.js
-
-// Add a new follow-up
-exports.addFollowUp = async (req, res) => {
-  const { id } = req.params;
-  // Destructure 'status' from req.body
-  const { date, note, addedBy, status } = req.body;
-
-  try {
+    const { id } = req.params;
+    const { text, timestamp, author } = req.body;
     const account = await BusinessAccount.findById(id);
     if (!account) {
-      return res.status(404).json({ message: 'Business Account not found' });
+      return res.status(404).json({ message: 'Account not found' });
+    }
+    account.notes.push({ text, timestamp, author });
+    await account.save();
+    res.status(200).json({ message: 'Note added successfully', notes: account.notes });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to add note', error: error.message });
+  }
+};
+
+
+// Quotation related functions (assuming they are implemented elsewhere or will be)
+exports.addQuotation = async (req, res) => {
+  // This is a placeholder. Real implementation would involve Quotation model.
+  res.status(501).json({ message: 'Add quotation not implemented yet.' });
+};
+
+exports.getQuotations = async (req, res) => {
+  // This is a placeholder. Real implementation would involve Quotation model.
+  res.status(501).json({ message: 'Get quotations not implemented yet.' });
+};
+
+// GET follow-ups by account ID
+exports.getFollowUpsByAccountId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const account = await BusinessAccount.findById(id).populate('followUps.addedBy', 'name');
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+    res.json(account.followUps);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching follow-ups', error: error.message });
+  }
+};
+
+// ADD follow-up
+exports.addFollowUp = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date, note, addedBy, status } = req.body; // status is now part of follow-up schema
+    const account = await BusinessAccount.findById(id);
+
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found' });
     }
 
-    // Create new follow-up object including status
-    const newFollowUp = { date, note, addedBy, status }; // Make sure 'status' is included here
-    account.followUps.push(newFollowUp);
+    account.followUps.push({ date, note, addedBy, status }); // Add status to the new follow-up
     await account.save();
 
-    res.status(200).json({ message: 'Follow-up added', followUps: account.followUps });
+    res.status(201).json({ message: 'Follow-up added successfully', followUps: account.followUps });
   } catch (error) {
     res.status(500).json({ message: 'Failed to add follow-up', error: error.message });
   }
@@ -190,7 +206,7 @@ exports.deleteFollowUp = async (req, res) => {
       return res.status(404).json({ message: 'Follow-up not found' });
     }
 
-    account.followUps.splice(index, 1);
+    account.followUps.splice(index, 1); // Remove the follow-up
     await account.save();
 
     res.status(200).json({ message: 'Follow-up deleted', followUps: account.followUps });

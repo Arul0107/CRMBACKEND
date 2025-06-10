@@ -6,6 +6,7 @@ const noteSchema = new mongoose.Schema({
   timestamp: String,
   author: String
 }, { _id: false });
+
 const followUpSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   note: { type: String, required: true },
@@ -17,6 +18,7 @@ const followUpSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now }
 }, { _id: false });
+
 const businessAccountSchema = new mongoose.Schema({
   businessName: { type: String, required: true },
   sourceType: {
@@ -41,7 +43,8 @@ const businessAccountSchema = new mongoose.Schema({
   website: String,
   type: { type: String, enum: ['Hot', 'Warm', 'Cold'], required: true },
   notes: [noteSchema],
-  status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+  // UPDATED: Added 'Waiting' and 'Closed' to the status enum
+  status: { type: String, enum: ['Active', 'Inactive', 'Waiting', 'Closed'], default: 'Active' },
   isCustomer: { type: Boolean, default: false }
 }, { timestamps: true });
 
