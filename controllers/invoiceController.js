@@ -1,13 +1,11 @@
 const Invoice = require('../models/Invoice');
-// If BusinessAccount is used globally in this controller for other functions,
-// uncomment the line below. Otherwise, keep it within the functions that use it.
-// const BusinessAccount = require('../models/BusinessAccount');
+const BusinessAccount = require('../models/BusinessAccount'); // Ensure this is consistently imported if used by other functions
 
 // GET all invoices
 exports.getAll = async (req, res) => {
   try {
     const invoices = await Invoice.find()
-      .populate('businessId') // Keep populating for full business details if needed elsewhere
+      .populate('businessId')
       .sort({ createdAt: -1 });
     res.json(invoices);
   } catch (err) {
@@ -21,7 +19,7 @@ exports.create = async (req, res) => {
   try {
     const { items, taxRate = 18, discountAmount = 0, invoiceType, ...rest } = req.body;
     let nextNumber;
-    let invoiceFields = {}; // Object to hold the specific number field to be added
+    let invoiceFields = {};
 
     if (invoiceType === 'Proforma') {
       const lastProforma = await Invoice.findOne({ invoiceType: 'Proforma' }).sort({ createdAt: -1 });
@@ -44,7 +42,7 @@ exports.create = async (req, res) => {
 
     const invoice = new Invoice({
       ...rest,
-      ...invoiceFields, // Spread the specific number field here (only one will be present)
+      ...invoiceFields,
       invoiceType,
       items: calculatedItems,
       subTotal,
@@ -52,7 +50,6 @@ exports.create = async (req, res) => {
       taxRate,
       discountAmount,
       totalAmount,
-      // Denormalize business/customer details from the request body
       businessName: req.body.businessName,
       customerName: req.body.customerName,
       customerAddress: req.body.customerAddress,
@@ -85,7 +82,6 @@ exports.convertToInvoice = async (req, res) => {
     if (!proforma || proforma.invoiceType !== 'Proforma') {
       return res.status(400).json({ error: 'Invalid Proforma invoice' });
     }
-    // Assuming proforma.proformaStatus indicates if it's confirmed
     if (proforma.proformaStatus !== 'confirmed') {
       return res.status(400).json({ error: 'Only confirmed Proforma can be converted' });
     }
@@ -95,26 +91,24 @@ exports.convertToInvoice = async (req, res) => {
       ? `INV-${String(parseInt(lastInvoice.invoiceNumber.split('-')[1]) + 1).padStart(4, '0')}`
       : 'INV-0001';
 
-    // Create a new Invoice document from the Proforma, clearing _id and proformaNumber
     const newInvoiceData = proforma.toObject();
-    delete newInvoiceData._id;             // Remove the _id to create a new document
-    delete newInvoiceData.proformaNumber;  // Crucially remove proformaNumber from the new document
-    delete newInvoiceData.proformaStatus;  // Clear proforma status for the new invoice
+    delete newInvoiceData._id;
+    delete newInvoiceData.proformaNumber;
+    delete newInvoiceData.proformaStatus;
 
     const newInvoice = new Invoice({
       ...newInvoiceData,
       invoiceNumber: nextInvoiceNumber,
       invoiceType: 'Invoice',
-      isClosed: false, // New invoice is not closed by default
+      isClosed: false,
       createdAt: new Date(),
       updatedAt: new Date()
     });
 
     await newInvoice.save();
 
-    // Optionally update the original proforma to mark it as converted and close it
-    proforma.conversionStatus = 'converted'; // Add a new status if needed on proforma
-    proforma.isClosed = true; // Close the original proforma
+    proforma.conversionStatus = 'converted';
+    proforma.isClosed = true;
     await proforma.save();
 
     res.json(newInvoice);
@@ -135,10 +129,10 @@ exports.updateProformaStatus = async (req, res) => {
     }
 
     invoice.proformaStatus = status;
-    if (status === 'confirmed' || status === 'cancelled' || status === 'converted') { // Added 'converted'
+    if (status === 'confirmed' || status === 'cancelled' || status === 'converted') {
       invoice.isClosed = true;
     } else {
-      invoice.isClosed = false; // Allow editing if status changes back from confirmed
+      invoice.isClosed = false;
     }
 
     await invoice.save();
@@ -149,22 +143,34 @@ exports.updateProformaStatus = async (req, res) => {
   }
 };
 
-// PATCH: Add payment to invoice
+// PATCH: Add payment to invoice with validation
 exports.addPayment = async (req, res) => {
   try {
     const { amount, method, reference, date, addedBy } = req.body;
-    const payment = { amount, method, reference, date, addedBy };
+    const paymentAmount = parseFloat(amount);
 
-    const updated = await Invoice.findByIdAndUpdate(
-      req.params.id,
-      {
-        $push: { paymentHistory: payment },
-        // You might want to update paymentStatus here based on total paid vs totalAmount
-      },
-      { new: true }
-    );
+    if (isNaN(paymentAmount) || paymentAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid payment amount. Must be a positive number.' });
+    }
 
-    res.json(updated);
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const currentTotalPaid = invoice.paymentHistory.reduce((sum, p) => sum + p.amount, 0);
+    const invoiceTotal = invoice.totalAmount || 0;
+
+    if (currentTotalPaid + paymentAmount > invoiceTotal) {
+      return res.status(400).json({ error: 'Adding this payment would exceed the total invoice amount.' });
+    }
+
+    const payment = { amount: paymentAmount, method, reference, date, addedBy };
+
+    invoice.paymentHistory.push(payment);
+    await invoice.save();
+
+    res.json(invoice);
   } catch (err) {
     console.error("Error adding payment:", err);
     res.status(400).json({ error: err.message });
@@ -220,7 +226,6 @@ exports.update = async (req, res) => {
         taxRate,
         discountAmount,
         totalAmount,
-        // Denormalize business/customer details from the request body if they are being updated
         businessName: req.body.businessName,
         customerName: req.body.customerName,
         customerAddress: req.body.customerAddress,
@@ -254,11 +259,8 @@ exports.remove = async (req, res) => {
 };
 
 // GET active businesses
-// This function needs the BusinessAccount model.
 exports.getActiveBusinesses = async (req, res) => {
   try {
-    // Ensure BusinessAccount model is imported if this function is used.
-    const BusinessAccount = require('../models/BusinessAccount'); 
     const businesses = await BusinessAccount.find({ status: 'Active' });
     res.json(businesses);
   } catch (err) {
@@ -322,13 +324,13 @@ exports.getPaymentsByBusinessId = async (req, res) => {
 exports.getFollowUpsByInvoiceId = async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id)
-      .populate('followUps.addedBy', 'name email'); // Populate user details
+      .populate('followUps.addedBy', 'name email');
 
     if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
 
     res.json(invoice.followUps || []);
   } catch (err) {
-    console.error("Error fetching follow-ups by invoice ID:", err); // Added specific console.error
+    console.error("Error fetching follow-ups by invoice ID:", err);
     res.status(500).json({ message: 'Failed to fetch follow-ups', error: err.message });
   }
 };
@@ -336,7 +338,7 @@ exports.getFollowUpsByInvoiceId = async (req, res) => {
 // ADD a follow-up to an invoice
 exports.addFollowUp = async (req, res) => {
   try {
-    const { id } = req.params; // Invoice ID
+    const { id } = req.params;
     const { date, note, addedBy } = req.body;
 
     if (!date || !note || !addedBy) {
@@ -351,17 +353,14 @@ exports.addFollowUp = async (req, res) => {
 
     res.status(200).json({ message: 'Follow-up added', followUps: invoice.followUps });
   } catch (error) {
-    console.error("Error adding follow-up:", error); // Added specific console.error
+    console.error("Error adding follow-up:", error);
     res.status(500).json({ message: 'Failed to add follow-up', error: error.message });
   }
 };
 
-// In invoiceController.js
-
 // UPDATE follow-up by index on an invoice
 exports.updateFollowUp = async (req, res) => {
-  const { id, index } = req.params; // id is invoice ID
-  // Destructure 'status' from req.body
+  const { id, index } = req.params;
   const { date, note, status } = req.body;
 
   try {
@@ -372,7 +371,6 @@ exports.updateFollowUp = async (req, res) => {
 
     invoice.followUps[index].date = date;
     invoice.followUps[index].note = note;
-    // Update the status
     invoice.followUps[index].status = status;
     await invoice.save();
 
@@ -382,9 +380,10 @@ exports.updateFollowUp = async (req, res) => {
     res.status(500).json({ message: 'Error updating follow-up', error: error.message });
   }
 };
+
 // DELETE follow-up by index on an invoice
 exports.deleteFollowUp = async (req, res) => {
-  const { id, index } = req.params; // id is invoice ID
+  const { id, index } = req.params;
 
   try {
     const invoice = await Invoice.findById(id);
@@ -397,27 +396,54 @@ exports.deleteFollowUp = async (req, res) => {
 
     res.status(200).json({ message: 'Follow-up deleted', followUps: invoice.followUps });
   } catch (error) {
-    console.error("Error deleting follow-up:", error); // Added specific console.error
+    console.error("Error deleting follow-up:", error);
     res.status(500).json({ message: 'Error deleting follow-up', error: error.message });
   }
 };
-// PATCH close an invoice (e.g., mark as finalized, no more edits)
-exports.closeInvoice = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const invoice = await Invoice.findById(id);
 
+// NEW: Delete a specific payment from an invoice's payment history
+exports.deletePayment = async (req, res) => {
+  try {
+    const { invoiceId, paymentId } = req.params;
+
+    const invoice = await Invoice.findById(invoiceId);
     if (!invoice) {
-      return res.status(404).json({ message: 'Invoice not found.' });
+      return res.status(404).json({ error: 'Invoice not found' });
     }
 
-    // This line now correctly sets the 'isClosed' field in the database
-    invoice.isClosed = true; 
+    const paymentIndex = invoice.paymentHistory.findIndex(p => p._id.toString() === paymentId);
+
+    if (paymentIndex === -1) {
+      return res.status(404).json({ error: 'Payment not found in this invoice' });
+    }
+
+    invoice.paymentHistory.splice(paymentIndex, 1);
+
     await invoice.save();
 
-    res.status(200).json({ message: 'Invoice closed successfully.', invoice });
-  } catch (error) {
-    console.error("Error closing invoice:", error);
-    res.status(500).json({ message: 'Error closing invoice', error: error.message });
+    res.json({ message: 'Payment deleted successfully', invoice });
+  } catch (err) {
+    console.error("Error deleting payment:", err);
+    res.status(500).json({ error: 'Failed to delete payment' });
   }
 };
+
+// This function seems duplicated. Keeping the first one.
+// exports.closeInvoice = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const invoice = await Invoice.findById(id);
+
+//     if (!invoice) {
+//       return res.status(404).json({ message: 'Invoice not found.' });
+//     }
+
+//     invoice.isClosed = true;
+//     await invoice.save();
+
+//     res.status(200).json({ message: 'Invoice closed successfully.', invoice });
+//   } catch (error) {
+//     console.error("Error closing invoice:", error);
+//     res.status(500).json({ message: 'Error closing invoice', error: error.message });
+//   }
+// };

@@ -26,10 +26,16 @@ router.put('/:id/paymentHistory', invoiceController.updatePaymentHistory);
 // PATCH routes
 router.patch('/:id/close', invoiceController.closeInvoice);
 router.patch('/:id/unlock', invoiceController.unlockInvoice);
-router.patch('/:id/payments', invoiceController.addPayment);
+// CORRECTED: This route is for adding a NEW payment, so it should be POST
 router.patch('/:id/convert-to-invoice', invoiceController.convertToInvoice);
-router.patch('/:id/close', invoiceController.closeInvoice);
-// DELETE
+
+// This route is for adding a NEW payment to an invoice's paymentHistory array
+router.post('/:id/payments', invoiceController.addPayment);
+
+// NEW: Route to delete a specific payment from an invoice
+router.delete('/:invoiceId/payments/:paymentId', invoiceController.deletePayment);
+
+// DELETE invoice
 router.delete('/:id', invoiceController.remove);
 
 module.exports = router;
