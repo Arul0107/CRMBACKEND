@@ -1,3 +1,4 @@
+// server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -5,18 +6,23 @@ const connectDB = require('./config/db');
 
 const app = express();
 
-// ✅ Proper CORS configuration (only once)
+// ✅ CORS Configuration
 const corsOptions = {
-  origin: "https://crmfrontend-sage.vercel.app", // allow your frontend
+  origin: 'https://crmfrontend-sage.vercel.app', // your frontend domain
   credentials: true,
-  methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // handle preflight requests
+app.options('*', cors(corsOptions)); // handle preflight requests
 
 app.use(express.json());
+
+// ✅ CORS Test Route (Optional - For Debugging)
+app.get('/cors-test', (req, res) => {
+  res.json({ message: '✅ CORS is working properly' });
+});
 
 // ✅ Route files
 const businessRoutes = require('./routes/businessAccountRoutes');
@@ -26,7 +32,7 @@ const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 
-// ✅ Route mounting
+// ✅ Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', businessRoutes);
 app.use('/api/quotations', quotationRoutes);
@@ -34,7 +40,7 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', productRoutes);
 
-// ✅ Test route
+// ✅ Health check route
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Server is working fine 🎉' });
 });
