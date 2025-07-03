@@ -15,7 +15,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions)); // Preflight support
-
 app.use(express.json());
 
 // ✅ Route files
@@ -25,6 +24,7 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
+const notesRoutes = require('./routes/notesRoutes'); // ✅ Make sure to include this
 
 // ✅ Route mounting
 app.use('/api/auth', authRoutes);
@@ -33,13 +33,14 @@ app.use('/api/quotations', quotationRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', productRoutes);
+app.use('/api', notesRoutes); // ✅ New notes route included
 
 // ✅ Test route
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Server is working fine 🎉' });
 });
 
-// ✅ Connect DB and start server
+// ✅ Start server after DB connects
 connectDB().then(() => {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
