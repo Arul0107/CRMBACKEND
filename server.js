@@ -24,7 +24,7 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
-const notesRoutes = require('./routes/notesRoutes'); // ✅ Make sure to include this
+const notesRoutes = require('./routes/notesRoutes'); // Make sure to use the corrected notesRoutes.js file
 
 // ✅ Route mounting
 app.use('/api/auth', authRoutes);
@@ -32,8 +32,8 @@ app.use('/api/accounts', businessRoutes);
 app.use('/api/quotations', quotationRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api', productRoutes);
-app.use('/api', notesRoutes); // ✅ New notes route included
+app.use('/api', productRoutes); // This mounts product routes under /api, e.g., /api/product, /api/product/:id
+app.use('/api', notesRoutes);   // This mounts notes routes under /api, e.g., /api/business-accounts/:id/notes, /api/:model/:id/notes/:noteId
 
 // ✅ Test route
 app.get('/api/test', (req, res) => {
