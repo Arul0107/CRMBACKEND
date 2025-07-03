@@ -6,22 +6,21 @@ const connectDB = require('./config/db');
 
 const app = express();
 
-// ✅ CORS Configuration
+// ✅ CORS Configuration (allow all origins, no credentials)
 const corsOptions = {
-  origin: 'https://crmfrontend-sage.vercel.app', // your frontend domain
-  credentials: true,
+  origin: '*',
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // handle preflight requests
+app.options('*', cors(corsOptions)); // Preflight support
 
 app.use(express.json());
 
-// ✅ CORS Test Route (Optional - For Debugging)
+// ✅ Optional: CORS Test Route
 app.get('/cors-test', (req, res) => {
-  res.json({ message: '✅ CORS is working properly' });
+  res.json({ message: '✅ CORS is open to all origins' });
 });
 
 // ✅ Route files
