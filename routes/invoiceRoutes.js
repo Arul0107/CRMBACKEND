@@ -4,19 +4,18 @@ const invoiceController = require('../controllers/invoiceController');
 
 // GET routes
 router.get('/', invoiceController.getAll);
-router.get('/types', invoiceController.getInvoiceTypes);
+// Removed router.get('/types') as invoiceType is now fixed to 'Invoice'
 router.get('/leads/active', invoiceController.getActiveBusinesses);
 router.get('/business/:id', invoiceController.getInvoicesByBusinessId);
 router.get('/business/:id/payments', invoiceController.getPaymentsByBusinessId);
 
 // --- CORRECTED FOLLOW-UP ROUTES (associated with Invoice ID) ---
-// These specific routes MUST be placed before the general '/:id' route.
 router.get('/:id/followups', invoiceController.getFollowUpsByInvoiceId);
 router.post('/:id/followups', invoiceController.addFollowUp);
 router.put('/:id/followups/:index', invoiceController.updateFollowUp);
 router.delete('/:id/followups/:index', invoiceController.deleteFollowUp);
 
-router.get('/:id', invoiceController.getInvoiceById); // This general route should now come after specific ones
+router.get('/:id', invoiceController.getInvoiceById);
 
 // POST & PUT routes
 router.post('/', invoiceController.create);
@@ -26,8 +25,7 @@ router.put('/:id/paymentHistory', invoiceController.updatePaymentHistory);
 // PATCH routes
 router.patch('/:id/close', invoiceController.closeInvoice);
 router.patch('/:id/unlock', invoiceController.unlockInvoice);
-// CORRECTED: This route is for adding a NEW payment, so it should be POST
-router.patch('/:id/convert-to-invoice', invoiceController.convertToInvoice);
+// Removed router.patch('/:id/convert-to-invoice') as Proforma is removed.
 
 // This route is for adding a NEW payment to an invoice's paymentHistory array
 router.post('/:id/payments', invoiceController.addPayment);
