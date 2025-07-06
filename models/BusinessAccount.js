@@ -29,9 +29,9 @@ const businessAccountSchema = new mongoose.Schema({
   gstNumber: { type: String, required: true },
   contactName: { type: String, required: true },
   email: { type: String, required: true },
+  mobileNumber: { type: String, required: true },
   phoneNumber: String,
   followUps: [followUpSchema],
-  mobileNumber: { type: String, required: true },
   addressLine1: { type: String, required: true },
   addressLine2: String,
   addressLine3: String,
@@ -44,6 +44,7 @@ const businessAccountSchema = new mongoose.Schema({
   type: { type: String, enum: ['Hot', 'Warm', 'Cold'], required: true },
   notes: [noteSchema],
   // UPDATED: Added 'Waiting' and 'Closed' to the status enum
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   status: { type: String, enum: ['Active', 'Inactive', 'Waiting', 'Closed'], default: 'Active' },
   isCustomer: { type: Boolean, default: false }
 }, { timestamps: true });

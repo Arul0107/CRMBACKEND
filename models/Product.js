@@ -22,7 +22,8 @@ const productSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   description: String,
   options: [optionSchema],
-  notes: [noteSchema]
+  notes: [noteSchema],
+  hsnSac: String // Added the HSN/SAC field here
 }, { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

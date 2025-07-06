@@ -1,84 +1,86 @@
-const Product = require('../models/Product');
-
-// Generate product_id like PROD-001
-const generateProductId = async () => {
-  const count = await Product.countDocuments();
-  return `PROD-${String(count + 1).padStart(3, '0')}`;
-};
+// productController.js
+const Product = require('../models/Product'); // Assuming your Product Mongoose model is here
 
 // GET all products
 exports.getAllProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
     res.json(products);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch products' });
+  } catch (err) {
+    console.error("Error fetching all products:", err);
+    res.status(500).json({ error: 'Failed to fetch products. Please try again later.' });
   }
 };
 
-// GET product by ID
+// GET one product by ID
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ error: 'Product not found' });
-    res.json(product);
-  } catch (error) {
-    res.status(404).json({ error: 'Invalid product ID' });
-  }
-};
-
-// CREATE product
-exports.createProduct = async (req, res) => {
-  try {
-    const product_id = await generateProductId();
-    const { productId, product_id: _, ...rest } = req.body;
-
-    const newProduct = new Product({
-      ...rest,
-      product_id,
-    });
-
-    await newProduct.save();
-    res.status(201).json(newProduct);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to create product', details: error.message });
-  }
-};
-
-// UPDATE product
-exports.updateProduct = async (req, res) => {
-  try {
-    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!updated) return res.status(404).json({ error: 'Product not found' });
-    res.json(updated);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to update product', details: error.message });
-  }
-};
-
-// DELETE product
-exports.deleteProduct = async (req, res) => {
-  try {
-    const deleted = await Product.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'Product not found' });
-    res.json({ message: 'Product deleted' });
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to delete product' });
-  }
-};
-
-// UPDATE product notes
-exports.updateProductNotes = async (req, res) => {
-  const { id } = req.params;
-  const { notes } = req.body;
-  try {
-    const product = await Product.findByIdAndUpdate(id, { notes }, { new: true });
-    if (!product) return res.status(404).json({ message: 'Product not found' });
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found.' });
+    }
     res.json(product);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to update notes' });
+    console.error("Error fetching product by ID:", err);
+    res.status(500).json({ error: 'Failed to fetch product.' });
+  }
+};
+
+// POST create a new product
+exports.createProduct = async (req, res) => {
+  try {
+    const newProduct = new Product(req.body);
+    const savedProduct = await newProduct.save();
+    res.status(201).json(savedProduct);
+  } catch (err) {
+    console.error("Error creating product:", err);
+    res.status(400).json({ error: 'Failed to create product. Please check your input.' });
+  }
+};
+
+// PUT update a product
+exports.updateProduct = async (req, res) => {
+  try {
+    const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!updatedProduct) {
+      return res.status(404).json({ error: 'Product not found.' });
+    }
+    res.json(updatedProduct);
+  } catch (err) {
+    console.error("Error updating product:", err);
+    res.status(400).json({ error: 'Failed to update product. Please check your input.' });
+  }
+};
+
+// DELETE a product
+exports.deleteProduct = async (req, res) => {
+  try {
+    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+    if (!deletedProduct) {
+      return res.status(404).json({ error: 'Product not found.' });
+    }
+    res.json({ message: "Product deleted successfully." });
+  } catch (err) {
+    console.error("Error deleting product:", err);
+    res.status(400).json({ error: 'Failed to delete product.' });
+  }
+};
+
+// PUT update product notes
+exports.updateProductNotes = async (req, res) => {
+  try {
+    const { notes } = req.body; // Assuming notes are sent in the request body
+    const updatedProduct = await Product.findByIdAndUpdate(
+      req.params.id,
+      { notes: notes }, // Update only the notes field
+      { new: true, runValidators: true }
+    );
+    if (!updatedProduct) {
+      return res.status(404).json({ error: 'Product not found.' });
+    }
+    res.json(updatedProduct);
+  } catch (err) {
+    console.error("Error updating product notes:", err);
+    res.status(400).json({ error: 'Failed to update product notes.' });
   }
 };

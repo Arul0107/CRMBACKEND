@@ -1,10 +1,11 @@
 const Invoice = require('../models/Invoice');
-const BusinessAccount = require('../models/BusinessAccount'); // Ensure this is consistently imported if used by other functions
+const BusinessAccount = require('../models/BusinessAccount');
 
 // GET all invoices
 exports.getAll = async (req, res) => {
   try {
-    const invoices = await Invoice.find()
+    // Fetch only 'Invoice' type documents
+    const invoices = await Invoice.find({ invoiceType: 'Invoice' })
       .populate('businessId')
       .sort({ createdAt: -1 });
     res.json(invoices);
@@ -17,23 +18,16 @@ exports.getAll = async (req, res) => {
 // POST create a new invoice
 exports.create = async (req, res) => {
   try {
-    const { items, taxRate = 18, discountAmount = 0, invoiceType, ...rest } = req.body;
+    const { items, taxRate = 18, discountAmount = 0, ...rest } = req.body; // invoiceType is now fixed to 'Invoice'
     let nextNumber;
     let invoiceFields = {};
 
-    if (invoiceType === 'Proforma') {
-      const lastProforma = await Invoice.findOne({ invoiceType: 'Proforma' }).sort({ createdAt: -1 });
-      nextNumber = lastProforma?.proformaNumber
-        ? `PRO-${String(parseInt(lastProforma.proformaNumber.split('-')[1]) + 1).padStart(4, '0')}`
-        : 'PRO-0001';
-      invoiceFields.proformaNumber = nextNumber;
-    } else { // 'Invoice'
-      const lastInvoice = await Invoice.findOne({ invoiceType: 'Invoice' }).sort({ createdAt: -1 });
-      nextNumber = lastInvoice?.invoiceNumber
-        ? `INV-${String(parseInt(lastInvoice.invoiceNumber.split('-')[1]) + 1).padStart(4, '0')}`
-        : 'INV-0001';
-      invoiceFields.invoiceNumber = nextNumber;
-    }
+    // Generate invoice number for 'Invoice' type only
+    const lastInvoice = await Invoice.findOne({ invoiceType: 'Invoice' }).sort({ createdAt: -1 });
+    nextNumber = lastInvoice?.invoiceNumber
+      ? `INV-${String(parseInt(lastInvoice.invoiceNumber.split('-')[1]) + 1).padStart(4, '0')}`
+      : 'INV-0001';
+    invoiceFields.invoiceNumber = nextNumber;
 
     const calculatedItems = items || [];
     const subTotal = calculatedItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
@@ -43,7 +37,7 @@ exports.create = async (req, res) => {
     const invoice = new Invoice({
       ...rest,
       ...invoiceFields,
-      invoiceType,
+      invoiceType: 'Invoice', // Hardcode invoiceType to 'Invoice'
       items: calculatedItems,
       subTotal,
       tax,
@@ -60,6 +54,10 @@ exports.create = async (req, res) => {
       contactPerson: req.body.contactPerson,
       contactNumber: req.body.contactNumber,
       paymentTerms: req.body.paymentTerms,
+      // NEW FIELDS: Add contactName, email, mobileNumber
+      contactName: req.body.contactName,
+      email: req.body.email,
+      mobileNumber: req.body.mobileNumber,
     });
 
     const saved = await invoice.save();
@@ -70,78 +68,7 @@ exports.create = async (req, res) => {
   }
 };
 
-// GET invoice type enums
-exports.getInvoiceTypes = (req, res) => {
-  res.json(['Invoice', 'Proforma']);
-};
-
-// Convert Proforma to Invoice
-exports.convertToInvoice = async (req, res) => {
-  try {
-    const proforma = await Invoice.findById(req.params.id);
-    if (!proforma || proforma.invoiceType !== 'Proforma') {
-      return res.status(400).json({ error: 'Invalid Proforma invoice' });
-    }
-    if (proforma.proformaStatus !== 'confirmed') {
-      return res.status(400).json({ error: 'Only confirmed Proforma can be converted' });
-    }
-
-    const lastInvoice = await Invoice.findOne({ invoiceType: 'Invoice' }).sort({ createdAt: -1 });
-    const nextInvoiceNumber = lastInvoice?.invoiceNumber
-      ? `INV-${String(parseInt(lastInvoice.invoiceNumber.split('-')[1]) + 1).padStart(4, '0')}`
-      : 'INV-0001';
-
-    const newInvoiceData = proforma.toObject();
-    delete newInvoiceData._id;
-    delete newInvoiceData.proformaNumber;
-    delete newInvoiceData.proformaStatus;
-
-    const newInvoice = new Invoice({
-      ...newInvoiceData,
-      invoiceNumber: nextInvoiceNumber,
-      invoiceType: 'Invoice',
-      isClosed: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-
-    await newInvoice.save();
-
-    proforma.conversionStatus = 'converted';
-    proforma.isClosed = true;
-    await proforma.save();
-
-    res.json(newInvoice);
-  } catch (err) {
-    console.error("Error converting proforma to invoice:", err);
-    res.status(400).json({ error: err.message });
-  }
-};
-
-// Update Proforma status
-exports.updateProformaStatus = async (req, res) => {
-  try {
-    const { status } = req.body;
-    const invoice = await Invoice.findById(req.params.id);
-
-    if (!invoice || invoice.invoiceType !== 'Proforma') {
-      return res.status(400).json({ error: 'Invalid Proforma invoice' });
-    }
-
-    invoice.proformaStatus = status;
-    if (status === 'confirmed' || status === 'cancelled' || status === 'converted') {
-      invoice.isClosed = true;
-    } else {
-      invoice.isClosed = false;
-    }
-
-    await invoice.save();
-    res.json(invoice);
-  } catch (err) {
-    console.error("Error updating proforma status:", err);
-    res.status(400).json({ error: err.message });
-  }
-};
+// Removed getInvoiceTypes, convertToInvoice, updateProformaStatus as Proforma is removed.
 
 // PATCH: Add payment to invoice with validation
 exports.addPayment = async (req, res) => {
@@ -236,6 +163,10 @@ exports.update = async (req, res) => {
         contactPerson: req.body.contactPerson,
         contactNumber: req.body.contactNumber,
         paymentTerms: req.body.paymentTerms,
+        // NEW FIELDS: Update contactName, email, mobileNumber
+        contactName: req.body.contactName,
+        email: req.body.email,
+        mobileNumber: req.body.mobileNumber,
       },
       { new: true }
     );
@@ -427,23 +358,3 @@ exports.deletePayment = async (req, res) => {
     res.status(500).json({ error: 'Failed to delete payment' });
   }
 };
-
-// This function seems duplicated. Keeping the first one.
-// exports.closeInvoice = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const invoice = await Invoice.findById(id);
-
-//     if (!invoice) {
-//       return res.status(404).json({ message: 'Invoice not found.' });
-//     }
-
-//     invoice.isClosed = true;
-//     await invoice.save();
-
-//     res.status(200).json({ message: 'Invoice closed successfully.', invoice });
-//   } catch (error) {
-//     console.error("Error closing invoice:", error);
-//     res.status(500).json({ message: 'Error closing invoice', error: error.message });
-//   }
-// };

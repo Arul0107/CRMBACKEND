@@ -4,9 +4,9 @@ const Quotation = require('../models/Quotation');
 // Get all accounts (leads + customers)
 exports.getAll = async (req, res) => {
     try {
-        // Fetch all accounts, including those with status 'Inactive' or 'Closed'
-        // Frontend will filter these based on the active tab
-        const accounts = await BusinessAccount.find().populate('followUps.addedBy', 'name');
+        const accounts = await BusinessAccount.find()
+            .populate('assignedTo', 'name role')
+            .populate('followUps.addedBy', 'name');
         res.json(accounts);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -21,7 +21,7 @@ exports.getLeadsBySource = async (req, res) => {
             isCustomer: false,
             status: 'Active',
             sourceType: sourceType
-        });
+        }).populate('assignedTo', 'name role');
         res.json(leads);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching leads by source', error: error.message });
@@ -31,7 +31,9 @@ exports.getLeadsBySource = async (req, res) => {
 // Get only active leads (not customers)
 exports.getActiveLeads = async (req, res) => {
     try {
-        const leads = await BusinessAccount.find({ status: 'Active', isCustomer: false }).populate('followUps.addedBy', 'name');
+        const leads = await BusinessAccount.find({ status: 'Active', isCustomer: false })
+            .populate('assignedTo', 'name role')
+            .populate('followUps.addedBy', 'name');
         res.json(leads);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -41,7 +43,9 @@ exports.getActiveLeads = async (req, res) => {
 // Get only customers
 exports.getCustomers = async (req, res) => {
     try {
-        const customers = await BusinessAccount.find({ isCustomer: true }).populate('followUps.addedBy', 'name');
+        const customers = await BusinessAccount.find({ isCustomer: true })
+            .populate('assignedTo', 'name role')
+            .populate('followUps.addedBy', 'name');
         res.json(customers);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -51,7 +55,9 @@ exports.getCustomers = async (req, res) => {
 // Get business account by ID
 exports.getAccountById = async (req, res) => {
     try {
-        const account = await BusinessAccount.findById(req.params.id).populate('followUps.addedBy', 'name');
+        const account = await BusinessAccount.findById(req.params.id)
+            .populate('assignedTo', 'name role')
+            .populate('followUps.addedBy', 'name');
         if (!account) {
             return res.status(404).json({ message: 'Account not found' });
         }
@@ -66,7 +72,9 @@ exports.create = async (req, res) => {
     try {
         const newAccount = new BusinessAccount(req.body);
         const savedAccount = await newAccount.save();
-        res.status(201).json(savedAccount);
+        const populatedAccount = await BusinessAccount.findById(savedAccount._id)
+            .populate('assignedTo', 'name role');
+        res.status(201).json(populatedAccount);
     } catch (err) {
         if (err.name === 'ValidationError') {
             return res.status(400).json({ error: err.message });
@@ -82,7 +90,8 @@ exports.update = async (req, res) => {
             req.params.id,
             req.body,
             { new: true, runValidators: true }
-        );
+        ).populate('assignedTo', 'name role');
+        
         if (!updated) {
             return res.status(404).json({ message: 'Account not found' });
         }
@@ -94,29 +103,26 @@ exports.update = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+// Soft DELETE business account (set status to 'Closed')
 exports.delete = async (req, res) => {
-  try {
-    const account = await BusinessAccount.findById(req.params.id);
-    if (!account) {
-      return res.status(404).json({ message: 'Account not found' });
+    try {
+        const account = await BusinessAccount.findById(req.params.id);
+        if (!account) {
+            return res.status(404).json({ message: 'Account not found' });
+        }
+
+        account.status = 'Closed';
+        account.isCustomer = false;
+        await account.save();
+
+        res.status(200).json({ message: 'Account status set to Closed', account });
+    } catch (err) {
+        console.error('Error in soft delete:', err);
+        res.status(500).json({ error: err.message || 'Server error during status update' });
     }
-
-    // Update status to Closed for soft delete
-    account.status = 'Closed';
-    account.isCustomer = false; // Ensure closed accounts aren't marked as customers
-    await account.save();
-
-    res.status(200).json({ 
-      message: 'Account status set to Closed', 
-      account 
-    });
-  } catch (err) {
-    console.error('Error in soft delete:', err);
-    res.status(500).json({ 
-      error: err.message || 'Server error during status update' 
-    });
-  }
 };
+
 // ADD note to an account
 exports.addNote = async (req, res) => {
     try {
@@ -134,7 +140,7 @@ exports.addNote = async (req, res) => {
     }
 };
 
-// Quotation related functions (assuming they are implemented elsewhere or will be)
+// Quotation related functions
 exports.addQuotation = async (req, res) => {
     res.status(501).json({ message: 'Add quotation not implemented yet.' });
 };
@@ -147,7 +153,8 @@ exports.getQuotations = async (req, res) => {
 exports.getFollowUpsByAccountId = async (req, res) => {
     try {
         const { id } = req.params;
-        const account = await BusinessAccount.findById(id).populate('followUps.addedBy', 'name');
+        const account = await BusinessAccount.findById(id)
+            .populate('followUps.addedBy', 'name');
         if (!account) {
             return res.status(404).json({ message: 'Account not found' });
         }
