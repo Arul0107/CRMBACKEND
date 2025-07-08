@@ -23,7 +23,7 @@ const businessAccountSchema = new mongoose.Schema({
   businessName: { type: String, required: true },
   sourceType: {
     type: String,
-    enum: ['Direct', 'Facebook ', 'Google Ads', 'Website', 'Cold Call', 'Other'], // UPDATED ENUM VALUES
+    enum: ['Direct', 'Facebook', 'Google Ads', 'Website', 'Cold Call', 'Other'], // UPDATED ENUM VALUES
     default: 'Other'
   },
   gstNumber: { type: String, required: true },
@@ -45,7 +45,7 @@ const businessAccountSchema = new mongoose.Schema({
   notes: [noteSchema],
   // UPDATED: Added 'Waiting' and 'Closed' to the status enum
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  status: { type: String, enum: ['Active', 'Inactive', 'Waiting', 'Closed'], default: 'Active' },
+  status: { type: String, enum: ['Active', 'Inactive', 'Pipeline', 'Closed'], default: 'Active' },
   isCustomer: { type: Boolean, default: false }
 }, { timestamps: true });
 

@@ -31,7 +31,10 @@ exports.getLeadsBySource = async (req, res) => {
 // Get only active leads (not customers)
 exports.getActiveLeads = async (req, res) => {
     try {
-        const leads = await BusinessAccount.find({ status: 'Active', isCustomer: false })
+         const leads = await BusinessAccount.find({
+            status: { $in: ['Active', 'Pipeline'] },
+            isCustomer: false
+        })
             .populate('assignedTo', 'name role')
             .populate('followUps.addedBy', 'name');
         res.json(leads);
