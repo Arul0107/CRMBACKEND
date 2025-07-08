@@ -156,7 +156,6 @@ exports.update = async (req, res) => {
         businessName: req.body.businessName,
         customerName: req.body.customerName,
         customerAddress: req.body.customerAddress,
-        customerGSTIN: req.body.customerGSTIN,
         companyGSTIN: req.body.companyGSTIN,
         companyName: req.body.companyName,
         companyAddress: req.body.companyAddress,
@@ -178,9 +177,13 @@ exports.update = async (req, res) => {
   }
 };
 
-// DELETE invoice
+// DELETE invoice (blocked if isClosed is true)
 exports.remove = async (req, res) => {
   try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (invoice.isClosed) return res.status(403).json({ error: 'Invoice is locked and cannot be deleted' });
+
     await Invoice.findByIdAndDelete(req.params.id);
     res.json({ message: 'Deleted' });
   } catch (err) {
