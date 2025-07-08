@@ -1,11 +1,14 @@
+// Invoice.js
 const mongoose = require('mongoose');
 
+// Schema for notes associated with an invoice
 const noteSchema = new mongoose.Schema({
   text: String,
   timestamp: String,
   author: String
-}, { _id: false });
+}, { _id: false }); // _id: false prevents Mongoose from creating a default _id for subdocuments
 
+// Schema for payment history entries
 const paymentSchema = new mongoose.Schema({
   amount: Number,
   date: String,
@@ -14,10 +17,11 @@ const paymentSchema = new mongoose.Schema({
   addedBy: String
 }, { _id: false });
 
+// Schema for follow-up entries
 const followUpSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   note: { type: String, required: true },
-  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Reference to a User model
   status: {
     type: String,
     enum: ['pending', 'completed'],
@@ -34,15 +38,16 @@ const itemSchema = new mongoose.Schema({
   hsnSac: String,
   quantity: Number,
   rate: Number,
-  specifications: [{ name: String, value: String }]
-}, { _id: false }); // Ensure _id is not automatically generated for sub-documents if you don't need it
+  specifications: [{ name: String, value: String }] // Array of specification objects
+}, { _id: false });
 
+// Main Invoice Schema
 const invoiceSchema = new mongoose.Schema({
-  // Unique invoice number
-  invoiceNumber: { type: String, unique: true, sparse: true }, // Only for 'Invoice' type
+  // Unique invoice number, sparse allows null values but ensures uniqueness for non-null
+  invoiceNumber: { type: String, unique: true, sparse: true },
 
-  businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'BusinessAccount' },
-  businessName: String,             // Denormalized for display
+  businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'BusinessAccount' }, // Reference to BusinessAccount model
+  businessName: String,             // Denormalized for display and easier access
   customerName: String,
   customerAddress: String,
   customerGSTIN: String,
@@ -51,15 +56,16 @@ const invoiceSchema = new mongoose.Schema({
   companyAddress: String,
   contactPerson: String,
   contactNumber: String,
+  
   // NEW FIELDS: Added contactName, email, mobileNumber for the customer/business contact
   contactName: { type: String, required: true },
-  email: { type: String, required: true }, // Corrected: Changed type from 'true' to 'String'
+  email: { type: String, required: true },
   mobileNumber: { type: String, required: true },
 
-  date: String,
-  dueDate: String,
+  date: String, // Date of invoice creation
+  dueDate: String, // Due date for payment
 
-  items: [itemSchema], // Changed to use the new itemSchema
+  items: [itemSchema], // Array of items using the defined itemSchema
 
   subTotal: Number,
   tax: Number,
@@ -69,30 +75,31 @@ const invoiceSchema = new mongoose.Schema({
 
   gstType: { type: String, enum: ['intrastate', 'interstate'], default: 'intrastate' },
   gstPercentage: { type: Number, default: 18 }, // Custom entry for GST percentage
-  cgstAmount: Number,
-  sgstAmount: Number,
-  igstAmount: Number,
+  cgstAmount: Number, // Central GST amount
+  sgstAmount: Number, // State GST amount
+  igstAmount: Number, // Integrated GST amount
 
   paymentStatus: {
     type: String,
     enum: ['pending', 'partial', 'paid'],
     default: 'pending'
   },
-  paymentHistory: [paymentSchema],
+  paymentHistory: [paymentSchema], // Array of payment entries
 
   invoiceType: {
     type: String,
-    enum: ['Invoice'], // Removed 'Proforma'
+    enum: ['Invoice'], // Only 'Invoice' type is supported now
     default: 'Invoice'
   },
   
-
-  notes: [noteSchema],
+  notes: [noteSchema], // Array of notes
   paymentTerms: String,
-  isClosed: { type: Boolean, default: false },
   
-  followUps: [followUpSchema]
+  // isClosed field to indicate if the invoice is locked/closed
+  isClosed: { type: Boolean, default: false }, 
+  
+  followUps: [followUpSchema] // Array of follow-up entries
 
-}, { timestamps: true });
+}, { timestamps: true }); // timestamps: true adds createdAt and updatedAt fields automatically
 
 module.exports = mongoose.model('Invoice', invoiceSchema);
