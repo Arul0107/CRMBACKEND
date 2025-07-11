@@ -17,9 +17,9 @@ exports.getAll = async (req, res) => {
 exports.getLeadsBySource = async (req, res) => {
     try {
         const { sourceType } = req.params;
+        // Adjusted to exclude 'Customer' status
         const leads = await BusinessAccount.find({
-            isCustomer: false,
-            status: 'Active',
+            status: { $ne: 'Customer' }, // Exclude 'Customer' status
             sourceType: sourceType
         }).populate('assignedTo', 'name role');
         res.json(leads);
@@ -31,7 +31,8 @@ exports.getLeadsBySource = async (req, res) => {
 // Get only active leads (not customers)
 exports.getActiveLeads = async (req, res) => {
     try {
-          const leads = await BusinessAccount.find({ status: 'Active', isCustomer: false })
+          // Changed to use status 'Active' and exclude 'Customer' status
+          const leads = await BusinessAccount.find({ status: 'Active' })
             .populate('assignedTo', 'name role')
             .populate('followUps.addedBy', 'name');
         res.json(leads);
@@ -43,7 +44,8 @@ exports.getActiveLeads = async (req, res) => {
 // Get only customers
 exports.getCustomers = async (req, res) => {
     try {
-        const customers = await BusinessAccount.find({ isCustomer: true })
+        // Now directly filters by status 'Customer'
+        const customers = await BusinessAccount.find({ status: 'Customer' })
             .populate('assignedTo', 'name role')
             .populate('followUps.addedBy', 'name');
         res.json(customers);
@@ -70,7 +72,15 @@ exports.getAccountById = async (req, res) => {
 // CREATE new business account
 exports.create = async (req, res) => {
     try {
-        const newAccount = new BusinessAccount(req.body);
+        const data = { ...req.body };
+        // Set isCustomer based on the initial status
+        if (data.status === 'Customer') {
+            data.isCustomer = true;
+        } else {
+            data.isCustomer = false;
+        }
+
+        const newAccount = new BusinessAccount(data);
         const savedAccount = await newAccount.save();
         const populatedAccount = await BusinessAccount.findById(savedAccount._id)
             .populate('assignedTo', 'name role');
@@ -86,12 +96,20 @@ exports.create = async (req, res) => {
 // UPDATE business account
 exports.update = async (req, res) => {
     try {
+        const data = { ...req.body };
+        // Update isCustomer based on the new status
+        if (data.status === 'Customer') {
+            data.isCustomer = true;
+        } else {
+            data.isCustomer = false;
+        }
+
         const updated = await BusinessAccount.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            data, // Pass the modified data
             { new: true, runValidators: true }
         ).populate('assignedTo', 'name role');
-        
+
         if (!updated) {
             return res.status(404).json({ message: 'Account not found' });
         }
@@ -113,7 +131,7 @@ exports.delete = async (req, res) => {
         }
 
         account.status = 'Closed';
-        account.isCustomer = false;
+        account.isCustomer = false; // A closed account is no longer considered a customer
         await account.save();
 
         res.status(200).json({ message: 'Account status set to Closed', account });
