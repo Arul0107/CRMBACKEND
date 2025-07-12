@@ -32,6 +32,7 @@ const productRoutes = require('./routes/productRoutes');
 
 // ✅ Route mounting
 app.use('/api/auth', authRoutes);
+
 app.use('/api/accounts', businessRoutes);       // BusinessAccount API
 app.use('/api/quotations', quotationRoutes);    // Quotations API
 app.use('/api/invoices', invoiceRoutes);        // Invoices API

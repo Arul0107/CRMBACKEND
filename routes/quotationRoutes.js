@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const quotationController = require('../controllers/quotationController'); // Ensure it's quotationController
+const businessAccountController = require('../controllers/businessAccountController'); // ✅ ADD THIS LINE
 
 // GET routes
 router.get('/', quotationController.getAll);
@@ -14,6 +15,9 @@ router.put('/:id', quotationController.update);
 
 // DELETE a quotation by ID
 router.delete('/:id', quotationController.remove);
+
+// ✅ Pipeline route (now with businessAccountController imported)
+router.get('/pipeline', businessAccountController.getActiveLeads);
 
 // GET active businesses (for selection in quotation form, etc.)
 router.get('/leads/active', quotationController.getActiveBusinesses);

@@ -65,6 +65,7 @@ exports.getAll = async (req, res) => {
   try {
     const quotations = await Quotation.find()
       .populate('businessId', 'contactName email phone address gstin mobileNumber businessName')
+      .populate('followUps.addedBy', 'name email') // Ensure addedBy in followUps is populated
       .sort({ createdAt: -1 });
     res.json(quotations);
   } catch (err) {
@@ -128,44 +129,87 @@ exports.create = async (req, res) => {
   }
 };
 
-// PUT update a quotation
+// PUT update a quotation (handles partial updates, especially for notes)
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    // Extract necessary fields for calculation from req.body
-    const { items, gstType, manualGstAmount, manualSgstPercentage, manualCgstPercentage, ...otherFields } = req.body;
+    const updateData = req.body; // Contains the fields sent from the frontend
 
-    // Perform calculations on the backend
-    const subTotal = calculateSubTotal(items);
-    const gstBreakdown = calculateTotalGst(items, gstType);
-    const total = calculateTotal(subTotal, gstBreakdown, gstType, manualGstAmount, manualSgstPercentage, manualCgstPercentage);
-
-    // Construct the gstDetails object to save
-    const gstDetails = {
-      sgst: gstBreakdown.sgst,
-      cgst: gstBreakdown.cgst,
-      igst: gstBreakdown.igst,
-      calculatedTotalGst: gstBreakdown.totalGst,
-      manualGstAmount: manualGstAmount !== undefined ? manualGstAmount : null,
-      manualSgstPercentage: manualSgstPercentage !== undefined ? manualSgstPercentage : null,
-      manualCgstPercentage: manualCgstPercentage !== undefined ? manualCgstPercentage : null,
-      finalTaxAmountUsed: formatCurrency(total - subTotal), // The actual tax amount used in final total
-    };
-
-    const updated = await Quotation.findByIdAndUpdate(id, {
-      ...otherFields,
-      items, // Include items
-      subTotal: formatCurrency(subTotal),
-      tax: gstDetails.finalTaxAmountUsed, // Store the final tax amount used
-      total: formatCurrency(total),
-      gstType,
-      gstDetails, // Store the detailed GST breakdown
-    }, { new: true, runValidators: true });
-
-    if (!updated) {
+    const quotation = await Quotation.findById(id);
+    if (!quotation) {
       return res.status(404).json({ error: 'Quotation not found.' });
     }
-    res.json(updated);
+
+    // 1. Handle notes update specifically if present
+    if (updateData.notes !== undefined) {
+      quotation.notes = updateData.notes;
+    }
+
+    // 2. Conditionally update and recalculate other fields if 'items' or GST-related fields are provided
+    // This ensures that only relevant calculations happen and existing data is not overwritten
+    if (updateData.items !== undefined || updateData.gstType !== undefined ||
+        updateData.manualGstAmount !== undefined || updateData.manualSgstPercentage !== undefined ||
+        updateData.manualCgstPercentage !== undefined) {
+
+      // Use updateData's values if present, otherwise use existing quotation values for calculation
+      const currentItems = updateData.items !== undefined ? updateData.items : quotation.items;
+      const currentGstType = updateData.gstType !== undefined ? updateData.gstType : quotation.gstType;
+      const currentManualGstAmount = updateData.manualGstAmount !== undefined ? updateData.manualGstAmount : quotation.gstDetails?.manualGstAmount;
+      const currentManualSgstPercentage = updateData.manualSgstPercentage !== undefined ? updateData.manualSgstPercentage : quotation.gstDetails?.manualSgstPercentage;
+      const currentManualCgstPercentage = updateData.manualCgstPercentage !== undefined ? updateData.manualCgstPercentage : quotation.gstDetails?.manualCgstPercentage;
+
+      const subTotal = calculateSubTotal(currentItems);
+      const gstBreakdown = calculateTotalGst(currentItems, currentGstType);
+      const total = calculateTotal(subTotal, gstBreakdown, currentGstType, currentManualGstAmount, currentManualSgstPercentage, currentManualCgstPercentage);
+
+      // Construct the updated gstDetails object
+      const newGstDetails = {
+        sgst: gstBreakdown.sgst,
+        cgst: gstBreakdown.cgst,
+        igst: gstBreakdown.igst,
+        calculatedTotalGst: gstBreakdown.totalGst,
+        manualGstAmount: currentManualGstAmount,
+        manualSgstPercentage: currentManualSgstPercentage,
+        manualCgstPercentage: currentManualCgstPercentage,
+        finalTaxAmountUsed: formatCurrency(total - subTotal),
+      };
+
+      // Apply the calculated and updated values to the quotation object
+      quotation.items = currentItems;
+      quotation.subTotal = formatCurrency(subTotal);
+      quotation.gstType = currentGstType;
+      quotation.tax = newGstDetails.finalTaxAmountUsed;
+      quotation.total = formatCurrency(total);
+      quotation.gstDetails = newGstDetails;
+    }
+
+    // 3. Update any other fields present in updateData that are not explicitly handled above
+    // This loop ensures that only provided fields are updated, preserving existing data
+    for (const key in updateData) {
+      if (updateData.hasOwnProperty(key) &&
+          key !== 'notes' && // Handled above
+          key !== 'items' && // Handled above in calculation block
+          key !== 'gstType' && // Handled above in calculation block
+          key !== 'manualGstAmount' && // Handled above in calculation block
+          key !== 'manualSgstPercentage' && // Handled above in calculation block
+          key !== 'manualCgstPercentage' && // Handled above in calculation block
+          key !== 'gstDetails' // This is derived and set, not directly from updateData
+         ) {
+        // Only update if the key exists on the quotation model to prevent adding arbitrary fields
+        if (quotation[key] !== undefined) {
+          quotation[key] = updateData[key];
+        }
+      }
+    }
+
+    await quotation.save();
+
+    // Re-populate if necessary for the response (e.g., to send back business name, populated follow-ups)
+    const updatedQuotation = await Quotation.findById(id)
+      .populate('businessId', 'contactName email phone address gstin mobileNumber businessName')
+      .populate('followUps.addedBy', 'name email');
+
+    res.status(200).json(updatedQuotation);
   } catch (err) {
     console.error("Error updating quotation:", err);
     res.status(400).json({ error: 'Failed to update quotation. Please check your input.' });
@@ -200,7 +244,10 @@ exports.getActiveBusinesses = async (req, res) => {
 // GET quotations by business ID
 exports.getQuotationsByBusinessId = async (req, res) => {
   try {
-    const quotations = await Quotation.find({ businessId: req.params.id });
+    const quotations = await Quotation.find({ businessId: req.params.id })
+      .populate('items.productId') // Assuming product details might be needed here
+      .populate('followUps.addedBy', 'name email')
+      .sort({ createdAt: -1 });
     res.json(quotations);
   } catch (err) {
     console.error("Error fetching quotations by business ID:", err);
@@ -217,6 +264,7 @@ exports.getFollowUpsByQuotationId = async (req, res) => {
     if (!quotation) {
       return res.status(404).json({ message: 'Quotation not found.' });
     }
+    // Directly return the followUps array or an empty array
     res.json(quotation.followUps || []);
   } catch (err) {
     console.error("Error fetching follow-ups for quotation:", err);
@@ -235,7 +283,10 @@ exports.addFollowUp = async (req, res) => {
       return res.status(404).json({ message: 'Quotation not found' });
     }
 
-    const newFollowUp = { date, note, addedBy, status };
+    const newFollowUp = { date, note, addedBy };
+    if (status !== undefined) { // Only set status if explicitly provided
+      newFollowUp.status = status;
+    }
     quotation.followUps.push(newFollowUp);
     await quotation.save();
 
@@ -262,7 +313,9 @@ exports.updateFollowUp = async (req, res) => {
 
     quotation.followUps[index].date = date;
     quotation.followUps[index].note = note;
-    quotation.followUps[index].status = status;
+    if (status !== undefined) { // Only update status if explicitly provided
+      quotation.followUps[index].status = status;
+    }
     await quotation.save();
 
     const updatedQuotation = await Quotation.findById(id)
