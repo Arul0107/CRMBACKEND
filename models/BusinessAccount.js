@@ -23,7 +23,7 @@ const businessAccountSchema = new mongoose.Schema({
   businessName: { type: String, required: true },
   sourceType: {
     type: String,
-    enum: ['Direct', 'Facebook', 'Google Ads', 'Website',  'client','tradefair', 'Other'], // UPDATED ENUM VALUES
+    enum: ['Direct', 'socialmedia', 'online',  'client','tradefair', 'Other'], // UPDATED ENUM VALUES
     default: 'Other'
   },
   gstNumber: { type: String, required: true },
