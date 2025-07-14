@@ -11,7 +11,7 @@ const app = express();
 app.use(cors());
 
 const corsOptions = {
-  origin: ["https://crmfrontend-sage.vercel.app"],
+  origin: ["https://megacarne-frontend.vercel.app"],
   credentials: true,
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
