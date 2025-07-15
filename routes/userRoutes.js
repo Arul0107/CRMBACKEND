@@ -8,5 +8,5 @@ router.get('/:id', userController.getSingleUser);    // Get a single user by ID 
 router.post('/', userController.createUser);         // Create a new user
 router.put('/:id', userController.updateUser);       // Update an existing user
 router.delete('/:id', userController.deleteUser);    // Delete a user
-
+router.put('/transfer/:id', userController.transferUserTeam);
 module.exports = router;
