@@ -45,7 +45,7 @@ const businessAccountSchema = new mongoose.Schema({
   notes: [noteSchema],
   // UPDATED: Added 'Waiting' and 'Closed' to the status enum
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  status: { type: String, enum: ['Active', 'Inactive', 'Pipeline', 'Closed', 'Customer'], default: 'Active' }, //
+  status: { type: String, enum: ['Active', 'Inactive', 'Pipeline', 'Closed', 'Customer','Quotations'], default: 'Active' }, // ADDED 'Quotations'
   isCustomer: { type: Boolean, default: false }
 }, { timestamps: true });
 

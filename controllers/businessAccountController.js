@@ -121,7 +121,16 @@ exports.update = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
-
+exports.getQuotationsSent = async (req, res) => {
+    try {
+        const quotations = await BusinessAccount.find({ status: 'Quotations' })
+            .populate('assignedTo', 'name role')
+            .populate('followUps.addedBy', 'name');
+        res.json(quotations);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
 // Soft DELETE business account (set status to 'Closed')
 exports.delete = async (req, res) => {
     try {
