@@ -1,5 +1,6 @@
 // productController.js
-const Product = require('../models/Product'); // Assuming your Product Mongoose model is here
+const Product = require('../models/Product');
+const { v4: uuidv4 } = require('uuid'); // Import uuid for generating unique IDs
 
 // GET all products
 exports.getAllProducts = async (req, res) => {
@@ -29,7 +30,12 @@ exports.getProductById = async (req, res) => {
 // POST create a new product
 exports.createProduct = async (req, res) => {
   try {
-    const newProduct = new Product(req.body);
+    // Generate a unique product_id before creating the product
+    const newProductData = {
+      ...req.body,
+      product_id: uuidv4() // Assign a new UUID
+    };
+    const newProduct = new Product(newProductData);
     const savedProduct = await newProduct.save();
     res.status(201).json(savedProduct);
   } catch (err) {
@@ -69,10 +75,10 @@ exports.deleteProduct = async (req, res) => {
 // PUT update product notes
 exports.updateProductNotes = async (req, res) => {
   try {
-    const { notes } = req.body; // Assuming notes are sent in the request body
+    const { notes } = req.body;
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
-      { notes: notes }, // Update only the notes field
+      { notes: notes },
       { new: true, runValidators: true }
     );
     if (!updatedProduct) {
