@@ -26,7 +26,7 @@ const businessAccountSchema = new mongoose.Schema({
     enum: ['Direct', 'socialmedia', 'online',  'client','tradefair', 'Other'], // UPDATED ENUM VALUES
     default: 'Other'
   },
-  gstNumber: { type: String, required: true },
+  gstNumber: { type: String, required: false }, // UPDATED: Made GST Number optional
   contactName: { type: String, required: true },
   email: { type: String, required: true },
   mobileNumber: { type: String, required: true },

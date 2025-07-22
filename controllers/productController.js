@@ -1,5 +1,6 @@
 // productController.js
 const Product = require('../models/Product'); // Assuming your Product Mongoose model is here
+const { v4: uuidv4 } = require('uuid'); //Import uuid
 
 // GET all products
 exports.getAllProducts = async (req, res) => {
@@ -29,7 +30,12 @@ exports.getProductById = async (req, res) => {
 // POST create a new product
 exports.createProduct = async (req, res) => {
   try {
-    const newProduct = new Product(req.body);
+    // Generate a unique product_id before creating the product
+    const newProductId = uuidv4(); //
+    const newProduct = new Product({
+      ...req.body,
+      product_id: newProductId //Assign the generated ID
+    });
     const savedProduct = await newProduct.save();
     res.status(201).json(savedProduct);
   } catch (err) {

@@ -7,8 +7,8 @@ const noteSchema = new mongoose.Schema({
 }, { _id: false });
 
 const optionSchema = new mongoose.Schema({
-  type: { type: String, required: true },
-  description: { type: String, required: true },
+  type: { type: String, required: false },
+  description: { type: String, required: false },
 }, { _id: false });
 
 const productSchema = new mongoose.Schema({

@@ -15,7 +15,7 @@ const itemSchema = new mongoose.Schema({
   quantityType: String,
   rate: Number,
   specifications: [specificationSchema],
-  gstPercentage: { type: Number, default: 18 } // Added gstPercentage to itemSchema
+  gstPercentage: { type: Number, default: 18 }
 }, { _id: false });
 
 const noteSchema = new mongoose.Schema({
@@ -24,28 +24,27 @@ const noteSchema = new mongoose.Schema({
   author: String
 }, { _id: false });
 
-// Define the followUpSchema correctly with the 'addedBy' field referencing 'User'
 const followUpSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   note: { type: String, required: true },
   addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  status: { // <--- ADDED: New status field for follow-ups
+  status: {
     type: String,
-    enum: ['pending', 'completed'], // Or 'open', 'closed', etc.
+    enum: ['pending', 'completed'],
     default: 'pending'
   },
   createdAt: { type: Date, default: Date.now }
 }, { _id: false });
 
-// Define the GST Details Schema
 const gstDetailsSchema = new mongoose.Schema({
   sgst: { type: Number, default: 0 },
   cgst: { type: Number, default: 0 },
   igst: { type: Number, default: 0 },
   calculatedTotalGst: { type: Number, default: 0 },
-  manualGstAmount: { type: Number, default: null }, // Absolute manual override
-  manualSgstPercentage: { type: Number, default: null }, // Manual SGST percentage override
-  manualCgstPercentage: { type: Number, default: null }, // Manual CGST percentage override
+  manualGstAmount: { type: Number, default: null },
+  manualSgstPercentage: { type: Number, default: null },
+  manualCgstPercentage: { type: Number, default: null },
+  // manualIgstPercentage: { type: Number, default: null }, // Assuming you might add this later based on previous discussions
   finalTaxAmountUsed: { type: Number, default: 0 }
 }, { _id: false });
 
@@ -60,11 +59,13 @@ const quotationSchema = new mongoose.Schema({
   quotationNumber: { type: String, unique: true, required: true },
   date: String,
   validUntil: String,
-  mobileNumber: { type: String}, // mobileNumber is now required
+  mobileNumber: { type: String },
 
-  customerName: String,
-  customerEmail: String, // Added customerEmail
-  customerAddress: String, // Keep customerAddress if still relevant, though formatBusinessInfo might render it
+  // --- CORRECTED SYNTAX FOR DEFAULT NULL VALUES ---
+  customerName: { type: String, default: null },
+  customerEmail: { type: String, default: null },
+  customerAddress: String, // Keep as is if no default is needed or if it's derived
+
   items: [itemSchema],
   subTotal: Number,
   tax: Number,
@@ -73,12 +74,27 @@ const quotationSchema = new mongoose.Schema({
   notes: [noteSchema],
   pdfUrl: String,
   gstType: String,
-  status: { // <--- ADDED: New status field for the main quotation
+  status: {
     type: String,
     enum: ['Draft', 'Pending', 'Approved', 'Rejected'],
     default: 'Draft'
   },
-  gstDetails: gstDetailsSchema // Added GST details sub-document
+
+  delivery: { type: String, default: null },
+  warranty: { type: String, default: null },
+  quotationNotes: { type: String, default: null },
+  paymentTerms: { type: String, default: null },
+  pricesTerms: { type: String, default: null },
+  ourPaymentTerms: { type: String, default: null },
+  packingForwardingCharges: { type: String, default: null },
+  transportationCharges: { type: String, default: null },
+  transporterName: { type: String, default: null },
+  modePlaceDelivery: { type: String, default: null },
+  offerValidity: { type: String, default: null },
+  customerScope: { type: String, default: null },
+  // --- END CORRECTED SYNTAX ---
+
+  gstDetails: gstDetailsSchema
 }, { timestamps: true });
 
 module.exports = mongoose.model('Quotation', quotationSchema);
