@@ -1,15 +1,69 @@
 const BusinessAccount = require('../models/BusinessAccount');
 const Quotation = require('../models/Quotation');
 
-// Get all accounts (leads + customers)
+// Get all accounts (leads + customers) - This can be deprecated if using getPaginatedAccounts for all list views
 exports.getAll = async (req, res) => {
     try {
         const accounts = await BusinessAccount.find()
             .populate('assignedTo', 'name role')
-            .populate('followUps.addedBy', 'name');
+            .populate('followUps.addedBy', 'name')
+            .populate('selectedProduct', 'productName price');
         res.json(accounts);
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+};
+
+// NEW FUNCTION: Get paginated and filtered accounts (leads + customers)
+exports.getPaginatedAccounts = async (req, res) => {
+    try {
+        const { page = 1, pageSize = 10, search = '', status, sortBy = 'createdAt', sortOrder = 'desc', userId, role } = req.query;
+
+        const skip = (parseInt(page) - 1) * parseInt(pageSize);
+        const limit = parseInt(pageSize);
+
+        let query = {};
+
+        // Apply role-based filtering for Employees
+        if (role === "Employee" && userId) {
+            query.assignedTo = userId;
+        }
+
+        // Apply status filter if provided
+        // Assuming 'status' from frontend tabs corresponds directly to Mongoose query
+        if (status && status !== 'all') { // 'all' is a frontend concept, not a status in DB
+            query.status = status;
+        }
+
+        // Apply search filter (case-insensitive regex for businessName and contactName)
+        if (search) {
+            query.$or = [
+                { businessName: { $regex: search, $options: 'i' } },
+                { contactName: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Count total documents matching the filters
+        const total = await BusinessAccount.countDocuments(query);
+
+        // Fetch accounts with pagination, sorting, and population
+        const accounts = await BusinessAccount.find(query)
+            .populate('assignedTo', 'name role')
+            .populate('followUps.addedBy', 'name') // Populate notes authors if needed
+            .populate('selectedProduct', 'productName price')
+            .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 }) // Dynamic sorting
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            data: accounts,
+            total,
+            page: parseInt(page),
+            pageSize: parseInt(pageSize)
+        });
+    } catch (err) {
+        console.error('Error in getPaginatedAccounts:', err);
+        res.status(500).json({ error: err.message || 'Server error fetching paginated accounts' });
     }
 };
 
@@ -17,11 +71,11 @@ exports.getAll = async (req, res) => {
 exports.getLeadsBySource = async (req, res) => {
     try {
         const { sourceType } = req.params;
-        // Adjusted to exclude 'Customer' status
         const leads = await BusinessAccount.find({
-            status: { $ne: 'Customer' }, // Exclude 'Customer' status
+            status: { $ne: 'Customer' },
             sourceType: sourceType
-        }).populate('assignedTo', 'name role');
+        }).populate('assignedTo', 'name role')
+          .populate('selectedProduct', 'productName price');
         res.json(leads);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching leads by source', error: error.message });
@@ -31,10 +85,10 @@ exports.getLeadsBySource = async (req, res) => {
 // Get only active leads (not customers)
 exports.getActiveLeads = async (req, res) => {
     try {
-          // Changed to use status 'Active' and exclude 'Customer' status
           const leads = await BusinessAccount.find({ status: 'Active' })
             .populate('assignedTo', 'name role')
-            .populate('followUps.addedBy', 'name');
+            .populate('followUps.addedBy', 'name')
+            .populate('selectedProduct', 'productName price');
         res.json(leads);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -44,10 +98,10 @@ exports.getActiveLeads = async (req, res) => {
 // Get only customers
 exports.getCustomers = async (req, res) => {
     try {
-        // Now directly filters by status 'Customer'
         const customers = await BusinessAccount.find({ status: 'Customer' })
             .populate('assignedTo', 'name role')
-            .populate('followUps.addedBy', 'name');
+            .populate('followUps.addedBy', 'name')
+            .populate('selectedProduct', 'productName price');
         res.json(customers);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -59,7 +113,8 @@ exports.getAccountById = async (req, res) => {
     try {
         const account = await BusinessAccount.findById(req.params.id)
             .populate('assignedTo', 'name role')
-            .populate('followUps.addedBy', 'name');
+            .populate('followUps.addedBy', 'name')
+            .populate('selectedProduct', 'productName price');
         if (!account) {
             return res.status(404).json({ message: 'Account not found' });
         }
@@ -73,7 +128,6 @@ exports.getAccountById = async (req, res) => {
 exports.create = async (req, res) => {
     try {
         const data = { ...req.body };
-        // Set isCustomer based on the initial status
         if (data.status === 'Customer') {
             data.isCustomer = true;
         } else {
@@ -83,7 +137,8 @@ exports.create = async (req, res) => {
         const newAccount = new BusinessAccount(data);
         const savedAccount = await newAccount.save();
         const populatedAccount = await BusinessAccount.findById(savedAccount._id)
-            .populate('assignedTo', 'name role');
+            .populate('assignedTo', 'name role')
+            .populate('selectedProduct', 'productName price');
         res.status(201).json(populatedAccount);
     } catch (err) {
         if (err.name === 'ValidationError') {
@@ -97,7 +152,6 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         const data = { ...req.body };
-        // Update isCustomer based on the new status
         if (data.status === 'Customer') {
             data.isCustomer = true;
         } else {
@@ -106,9 +160,10 @@ exports.update = async (req, res) => {
 
         const updated = await BusinessAccount.findByIdAndUpdate(
             req.params.id,
-            data, // Pass the modified data
+            data,
             { new: true, runValidators: true }
-        ).populate('assignedTo', 'name role');
+        ).populate('assignedTo', 'name role')
+         .populate('selectedProduct', 'productName price');
 
         if (!updated) {
             return res.status(404).json({ message: 'Account not found' });
@@ -121,16 +176,19 @@ exports.update = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
 exports.getQuotationsSent = async (req, res) => {
     try {
         const quotations = await BusinessAccount.find({ status: 'Quotations' })
             .populate('assignedTo', 'name role')
-            .populate('followUps.addedBy', 'name');
+            .populate('followUps.addedBy', 'name')
+            .populate('selectedProduct', 'productName price');
         res.json(quotations);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
+
 // Soft DELETE business account (set status to 'Closed')
 exports.delete = async (req, res) => {
     try {
@@ -140,7 +198,7 @@ exports.delete = async (req, res) => {
         }
 
         account.status = 'Closed';
-        account.isCustomer = false; // A closed account is no longer considered a customer
+        account.isCustomer = false;
         await account.save();
 
         res.status(200).json({ message: 'Account status set to Closed', account });

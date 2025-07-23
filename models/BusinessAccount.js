@@ -11,9 +11,9 @@ const followUpSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   note: { type: String, required: true },
   addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  status: {        // <--- ADDED: New status field
+  status: {
     type: String,
-    enum: ['pending', 'completed'], // Or 'open', 'closed', etc.
+    enum: ['pending', 'completed'],
     default: 'pending'
   },
   createdAt: { type: Date, default: Date.now }
@@ -23,10 +23,10 @@ const businessAccountSchema = new mongoose.Schema({
   businessName: { type: String, required: true },
   sourceType: {
     type: String,
-    enum: ['Direct', 'socialmedia', 'online',  'client','tradefair', 'Other'], // UPDATED ENUM VALUES
+    enum: ['Direct', 'socialmedia', 'online',  'client','tradefair', 'Other'],
     default: 'Other'
   },
-  gstNumber: { type: String, required: false }, // UPDATED: Made GST Number optional
+  gstNumber: { type: String, required: false },
   contactName: { type: String, required: true },
   email: { type: String, required: true },
   mobileNumber: { type: String, required: true },
@@ -43,10 +43,10 @@ const businessAccountSchema = new mongoose.Schema({
   website: String,
   type: { type: String, enum: ['Hot', 'Warm', 'Cold'], required: true },
   notes: [noteSchema],
-  // UPDATED: Added 'Waiting' and 'Closed' to the status enum
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  status: { type: String, enum: ['Active', 'Inactive', 'Pipeline', 'Closed', 'Customer','Quotations'], default: 'Active' }, // ADDED 'Quotations'
-  isCustomer: { type: Boolean, default: false }
+  status: { type: String, enum: ['Active', 'Inactive', 'Pipeline', 'Closed', 'Customer','Quotations'], default: 'Active' },
+  isCustomer: { type: Boolean, default: false }, // Indicates if the account is a customer
+  selectedProduct: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null }, // NEW: Reference to Product
 }, { timestamps: true });
 
 module.exports = mongoose.model('BusinessAccount', businessAccountSchema);

@@ -4,7 +4,7 @@ const router = express.Router();
 const quotationController = require('../controllers/quotationController'); // Ensure it's quotationController
 const businessAccountController = require('../controllers/businessAccountController'); // ✅ ADD THIS LINE
 
-// GET routes
+// GET routes - will now accept ?page=X&limit=Y query parameters
 router.get('/', quotationController.getAll);
 
 // POST create a new quotation
